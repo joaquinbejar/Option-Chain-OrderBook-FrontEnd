@@ -1,10 +1,6 @@
 <script lang="ts">
-	const strategies = [
-		{ strategy: 'MM_Default', symbol: 'SPXW', totalPnl: 8420, realized: 2100, unrealized: 6320, theta: 2100, vega: 5400, delta: -200 },
-		{ strategy: 'Vol_Arb', symbol: 'NDX', totalPnl: 4200, realized: 500, unrealized: 3700, theta: 1200, vega: 2100, delta: 150 },
-		{ strategy: 'Gamma_Scalp', symbol: 'SPY', totalPnl: 2800, realized: 1800, unrealized: 1000, theta: -500, vega: 800, delta: 2500 },
-		{ strategy: 'Theta_Harvest', symbol: 'QQQ', totalPnl: -450, realized: 200, unrealized: -650, theta: 1500, vega: -1200, delta: -750 }
-	];
+	// Empty strategies - no P&L data yet
+	const strategies: any[] = [];
 </script>
 
 <div class="p-6 max-w-[1400px] mx-auto flex flex-col gap-6">
@@ -21,74 +17,75 @@
 		</div>
 	</div>
 
-	<!-- Summary Cards -->
+	<!-- Summary Cards - Empty State -->
 	<div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-		<div class="bg-surface-dark border border-primary/30 rounded-xl p-5 relative overflow-hidden">
-			<div class="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent pointer-events-none"></div>
+		<div class="bg-surface-dark border border-border-dark rounded-xl p-5 relative overflow-hidden">
 			<p class="text-text-muted text-sm font-medium mb-2">Total P&L</p>
-			<p class="text-white text-3xl font-bold">+$15,420</p>
-			<p class="text-success text-sm mt-1">+2.4%</p>
+			<p class="text-text-muted text-3xl font-bold">$0.00</p>
+			<p class="text-text-muted text-sm mt-1">No activity</p>
 		</div>
 		<div class="bg-surface-dark border border-border-dark rounded-xl p-5">
 			<p class="text-text-muted text-sm font-medium mb-2">Theta</p>
-			<p class="text-white text-2xl font-bold">+$4,200</p>
-			<p class="text-success text-sm mt-1">+0.8%</p>
+			<p class="text-text-muted text-2xl font-bold">$0.00</p>
+			<p class="text-text-muted text-sm mt-1">--</p>
 		</div>
 		<div class="bg-surface-dark border border-border-dark rounded-xl p-5">
 			<p class="text-text-muted text-sm font-medium mb-2">Spread</p>
-			<p class="text-white text-2xl font-bold">+$2,100</p>
-			<p class="text-success text-sm mt-1">+1.2%</p>
+			<p class="text-text-muted text-2xl font-bold">$0.00</p>
+			<p class="text-text-muted text-sm mt-1">--</p>
 		</div>
 		<div class="bg-surface-dark border border-border-dark rounded-xl p-5">
 			<p class="text-text-muted text-sm font-medium mb-2">Delta</p>
-			<p class="text-white text-2xl font-bold">-$500</p>
-			<p class="text-danger text-sm mt-1">-0.1%</p>
+			<p class="text-text-muted text-2xl font-bold">$0.00</p>
+			<p class="text-text-muted text-sm mt-1">--</p>
 		</div>
 		<div class="bg-surface-dark border border-border-dark rounded-xl p-5">
 			<p class="text-text-muted text-sm font-medium mb-2">Vega</p>
-			<p class="text-white text-2xl font-bold">+$8,000</p>
-			<p class="text-success text-sm mt-1">+3.5%</p>
+			<p class="text-text-muted text-2xl font-bold">$0.00</p>
+			<p class="text-text-muted text-sm mt-1">--</p>
 		</div>
 	</div>
 
-	<!-- Attribution Waterfall -->
+	<!-- Attribution Waterfall - Empty State -->
 	<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 		<div class="bg-surface-dark border border-border-dark rounded-xl p-6">
 			<h3 class="text-white font-bold mb-6">Attribution Waterfall</h3>
 			<div class="flex items-end justify-between h-48 px-4">
 				<div class="flex flex-col items-center gap-2">
-					<div class="w-16 bg-slate-600 rounded-t h-[60%]"></div>
+					<div class="w-16 bg-slate-700/50 rounded-t h-[2%]"></div>
 					<span class="text-xs text-text-muted">Open</span>
 				</div>
 				<div class="flex flex-col items-center gap-2">
-					<div class="w-16 bg-danger/80 rounded-t h-[15%]"></div>
+					<div class="w-16 bg-slate-700/50 rounded-t h-[2%]"></div>
 					<span class="text-xs text-text-muted">Delta</span>
 				</div>
 				<div class="flex flex-col items-center gap-2">
-					<div class="w-16 bg-success/80 rounded-t h-[30%]"></div>
+					<div class="w-16 bg-slate-700/50 rounded-t h-[2%]"></div>
 					<span class="text-xs text-text-muted">Theta</span>
 				</div>
 				<div class="flex flex-col items-center gap-2">
-					<div class="w-16 bg-success/80 rounded-t h-[20%]"></div>
+					<div class="w-16 bg-slate-700/50 rounded-t h-[2%]"></div>
 					<span class="text-xs text-text-muted">Edge</span>
 				</div>
 				<div class="flex flex-col items-center gap-2">
-					<div class="w-16 bg-success/80 rounded-t h-[45%]"></div>
+					<div class="w-16 bg-slate-700/50 rounded-t h-[2%]"></div>
 					<span class="text-xs text-text-muted">Vega</span>
 				</div>
 				<div class="flex flex-col items-center gap-2">
-					<div class="w-16 bg-primary rounded-t h-[85%]"></div>
+					<div class="w-16 bg-slate-700/50 rounded-t h-[2%]"></div>
 					<span class="text-xs text-text-muted">Close</span>
 				</div>
 			</div>
+			<p class="text-center text-text-muted text-xs mt-4">No P&L data available</p>
 		</div>
 
 		<div class="bg-surface-dark border border-border-dark rounded-xl p-6">
 			<h3 class="text-white font-bold mb-6">Cumulative P&L (Intraday)</h3>
-			<div class="h-48 flex items-end justify-between gap-1 px-4">
-				{#each Array(24) as _, i}
-					<div class="flex-1 bg-primary/60 rounded-t hover:bg-primary transition-colors" style="height: {20 + Math.sin(i * 0.5) * 30 + i * 2}%"></div>
-				{/each}
+			<div class="h-48 flex items-center justify-center">
+				<div class="text-center">
+					<span class="material-symbols-outlined text-4xl text-text-muted/30 mb-2">show_chart</span>
+					<p class="text-text-muted text-sm">No trading activity today</p>
+				</div>
 			</div>
 			<div class="flex justify-between mt-2 text-xs text-text-muted px-4">
 				<span>09:30</span>

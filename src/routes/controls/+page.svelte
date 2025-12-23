@@ -1,10 +1,17 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { controlsStore } from '$lib/stores/controls';
 	import { systemStore } from '$lib/stores/system';
+	import { marketStore, priceList, isConnected } from '$lib/stores/market';
 
 	let spreadValue = $state(1.0);
 	let sizeValue = $state(100);
 	let skewValue = $state(0);
+
+	onMount(() => {
+		marketStore.init();
+		return () => marketStore.disconnect();
+	});
 
 	function handleSpreadChange(e: Event) {
 		const target = e.target as HTMLInputElement;
@@ -136,52 +143,38 @@
 			</div>
 		</div>
 
-		<!-- Live Metrics Summary -->
-		<div class="lg:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-4">
-			<div class="bg-surface-dark border border-border-dark rounded-xl p-4 flex flex-col gap-3">
-				<div class="flex items-center justify-between text-text-muted">
-					<span class="text-xs font-bold uppercase">Live Orders</span>
-					<span class="material-symbols-outlined text-lg">list_alt</span>
+		<!-- Live Prices from Backend -->
+		<div class="lg:col-span-2 grid grid-cols-2 sm:grid-cols-3 gap-4">
+			{#each $priceList as priceData}
+				<div class="bg-surface-dark border border-border-dark rounded-xl p-4 flex flex-col gap-3">
+					<div class="flex items-center justify-between text-text-muted">
+						<span class="text-xs font-bold uppercase">{priceData.symbol}</span>
+						<span class="material-symbols-outlined text-lg">currency_exchange</span>
+					</div>
+					<div>
+						<span class="text-2xl font-bold text-white block font-mono">
+							${priceData.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+						</span>
+						{#if priceData.change !== 0}
+							<span class="text-xs {priceData.change >= 0 ? 'text-success' : 'text-danger'} flex items-center gap-1 mt-1">
+								<span class="material-symbols-outlined text-xs">
+									{priceData.change >= 0 ? 'trending_up' : 'trending_down'}
+								</span>
+								{priceData.change >= 0 ? '+' : ''}{priceData.changePercent.toFixed(2)}%
+							</span>
+						{:else}
+							<span class="text-xs text-slate-400 mt-1 block">Live Price</span>
+						{/if}
+					</div>
 				</div>
-				<div>
-					<span class="text-2xl font-bold text-white block">1,248</span>
-					<span class="text-xs text-success flex items-center gap-1 mt-1">
-						<span class="material-symbols-outlined text-xs">trending_up</span> +12% vol
-					</span>
+			{:else}
+				<div class="bg-surface-dark border border-border-dark rounded-xl p-4 flex flex-col gap-3 col-span-full">
+					<div class="flex items-center justify-center text-text-muted py-4">
+						<span class="material-symbols-outlined animate-spin mr-2">sync</span>
+						<span class="text-sm">Loading prices from backend...</span>
+					</div>
 				</div>
-			</div>
-			<div class="bg-surface-dark border border-border-dark rounded-xl p-4 flex flex-col gap-3">
-				<div class="flex items-center justify-between text-text-muted">
-					<span class="text-xs font-bold uppercase">Net Delta</span>
-					<span class="material-symbols-outlined text-lg">change_history</span>
-				</div>
-				<div>
-					<span class="text-2xl font-bold text-white block">45.2</span>
-					<span class="text-xs text-slate-400 mt-1 block">BTC Equivalent</span>
-				</div>
-			</div>
-			<div class="bg-surface-dark border border-border-dark rounded-xl p-4 flex flex-col gap-3">
-				<div class="flex items-center justify-between text-text-muted">
-					<span class="text-xs font-bold uppercase">Gamma Exp</span>
-					<span class="material-symbols-outlined text-lg">functions</span>
-				</div>
-				<div>
-					<span class="text-2xl font-bold text-white block">-120</span>
-					<span class="text-xs text-danger flex items-center gap-1 mt-1">
-						<span class="material-symbols-outlined text-xs">warning</span> High Risk
-					</span>
-				</div>
-			</div>
-			<div class="bg-surface-dark border border-border-dark rounded-xl p-4 flex flex-col gap-3">
-				<div class="flex items-center justify-between text-text-muted">
-					<span class="text-xs font-bold uppercase">Vega</span>
-					<span class="material-symbols-outlined text-lg">waves</span>
-				</div>
-				<div>
-					<span class="text-2xl font-bold text-white block">8.4k</span>
-					<span class="text-xs text-slate-400 mt-1 block">per 1% vol</span>
-				</div>
-			</div>
+			{/each}
 		</div>
 	</div>
 

@@ -1,15 +1,10 @@
 <script lang="ts">
-	const positions = [
-		{ symbol: 'SPY', name: 'S&P 500 ETF', qty: -250, markPrice: 445.20, delta: 120.5, gamma: -45.2, vega: -200.0, theta: 350.1, pnl: 2100 },
-		{ symbol: 'QQQ', name: 'Nasdaq 100', qty: 100, markPrice: 372.50, delta: -30.4, gamma: 15.8, vega: 50.2, theta: -120.5, pnl: -450 },
-		{ symbol: 'IWM', name: 'Russell 2000', qty: 500, markPrice: 185.10, delta: 0.0, gamma: 2.1, vega: -12.5, theta: 45.0, pnl: 850 },
-		{ symbol: 'AAPL', name: 'Apple Inc.', qty: -1200, markPrice: 178.35, delta: 85.4, gamma: 55.2, vega: -400.1, theta: 600.5, pnl: 5320 },
-		{ symbol: 'TSLA', name: 'Tesla Inc.', qty: -50, markPrice: 245.60, delta: -210.5, gamma: -85.2, vega: 120.0, theta: -50.1, pnl: -1240 }
-	];
+	// Empty positions - no active trades
+	const positions: any[] = [];
 </script>
 
 <div class="p-4 grid grid-cols-12 grid-rows-[auto_1fr] gap-4 h-full overflow-hidden">
-	<!-- KPI Cards Row -->
+	<!-- KPI Cards Row - Empty State -->
 	<div class="col-span-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 h-auto">
 		<div class="flex flex-col justify-between rounded-xl p-4 border border-border-dark bg-surface-dark shadow-sm">
 			<div class="flex justify-between items-start mb-2">
@@ -17,9 +12,9 @@
 				<span class="material-symbols-outlined text-text-muted text-sm">pie_chart</span>
 			</div>
 			<div class="flex items-end justify-between">
-				<p class="text-white text-2xl font-bold tabular-nums">42%</p>
+				<p class="text-text-muted text-2xl font-bold tabular-nums">0%</p>
 				<div class="h-1.5 w-24 bg-slate-700 rounded-full overflow-hidden">
-					<div class="h-full bg-primary w-[42%]"></div>
+					<div class="h-full bg-primary w-[0%]"></div>
 				</div>
 			</div>
 		</div>
@@ -29,8 +24,8 @@
 				<span class="material-symbols-outlined text-text-muted text-sm">balance</span>
 			</div>
 			<div class="flex items-end justify-between">
-				<p class="text-white text-2xl font-bold tabular-nums">+450.20</p>
-				<span class="text-xs font-medium text-warning bg-warning/10 px-1.5 py-0.5 rounded">High Exp.</span>
+				<p class="text-text-muted text-2xl font-bold tabular-nums">0.00</p>
+				<span class="text-xs font-medium text-text-muted bg-slate-700/50 px-1.5 py-0.5 rounded">No positions</span>
 			</div>
 		</div>
 		<div class="flex flex-col justify-between rounded-xl p-4 border border-border-dark bg-surface-dark shadow-sm">
@@ -39,24 +34,18 @@
 				<span class="material-symbols-outlined text-text-muted text-sm">show_chart</span>
 			</div>
 			<div class="flex items-end justify-between">
-				<p class="text-white text-2xl font-bold tabular-nums">-1,240</p>
-				<span class="text-xs text-success flex items-center">
-					<span class="material-symbols-outlined text-[14px] mr-0.5">trending_down</span>
-					2.4%
-				</span>
+				<p class="text-text-muted text-2xl font-bold tabular-nums">0</p>
+				<span class="text-xs text-text-muted">No exposure</span>
 			</div>
 		</div>
-		<div class="flex flex-col justify-between rounded-xl p-4 border border-danger/30 bg-danger/5 shadow-sm relative overflow-hidden">
-			<div class="absolute right-0 top-0 p-4 opacity-10">
-				<span class="material-symbols-outlined text-6xl text-danger">warning</span>
-			</div>
+		<div class="flex flex-col justify-between rounded-xl p-4 border border-border-dark bg-surface-dark shadow-sm relative overflow-hidden">
 			<div class="flex justify-between items-start mb-2 relative z-10">
-				<p class="text-danger text-xs font-bold uppercase tracking-wider">Active Limits Breached</p>
-				<span class="animate-pulse h-2 w-2 rounded-full bg-danger"></span>
+				<p class="text-text-muted text-xs font-bold uppercase tracking-wider">Active Limits Breached</p>
+				<span class="h-2 w-2 rounded-full bg-success"></span>
 			</div>
 			<div class="flex items-end justify-between relative z-10">
-				<p class="text-white text-2xl font-bold tabular-nums">2</p>
-				<button class="text-xs font-bold text-white bg-danger hover:bg-red-600 px-2 py-1 rounded transition-colors">View Alerts</button>
+				<p class="text-success text-2xl font-bold tabular-nums">0</p>
+				<span class="text-xs text-text-muted">All clear</span>
 			</div>
 		</div>
 	</div>

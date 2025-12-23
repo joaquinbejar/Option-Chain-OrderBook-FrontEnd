@@ -1,15 +1,6 @@
 <script lang="ts">
-	const executions = [
-		{ time: '10:42:01.452', instrument: 'TSLA 240C', side: 'BUY', size: 10, execPx: 5.30, theoVal: 5.35, edge: 0.05, latency: 12 },
-		{ time: '10:42:00.110', instrument: 'AAPL 180P', side: 'SELL', size: 50, execPx: 2.10, theoVal: 2.12, edge: -0.02, latency: 8 },
-		{ time: '10:41:58.905', instrument: 'NVDA 450C', side: 'SELL', size: 5, execPx: 12.50, theoVal: 12.48, edge: 0.02, latency: 15 },
-		{ time: '10:41:55.200', instrument: 'SPY 440P', side: 'BUY', size: 100, execPx: 1.85, theoVal: 1.85, edge: 0.00, latency: 5 },
-		{ time: '10:41:50.001', instrument: 'AMZN 140C', side: 'BUY', size: 20, execPx: 3.15, theoVal: 3.20, edge: 0.05, latency: 22 },
-		{ time: '10:41:48.332', instrument: 'GOOGL 130C', side: 'SELL', size: 15, execPx: 4.50, theoVal: 4.50, edge: 0.00, latency: 145 },
-		{ time: '10:41:45.105', instrument: 'META 300P', side: 'BUY', size: 5, execPx: 8.20, theoVal: 8.35, edge: 0.15, latency: 9 },
-		{ time: '10:41:42.020', instrument: 'AMD 100C', side: 'SELL', size: 200, execPx: 1.45, theoVal: 1.44, edge: 0.01, latency: 4 },
-		{ time: '10:41:40.880', instrument: 'MSFT 330P', side: 'BUY', size: 30, execPx: 6.80, theoVal: 6.75, edge: -0.05, latency: 18 }
-	];
+	// Empty executions - no trades yet
+	const executions: any[] = [];
 </script>
 
 <div class="p-6 max-w-[1600px] mx-auto w-full flex flex-col gap-6">
@@ -33,7 +24,7 @@
 		</div>
 	</div>
 
-	<!-- KPI Stats -->
+	<!-- KPI Stats - Empty State -->
 	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 		<div class="flex flex-col justify-between rounded-xl bg-surface-dark border border-border-dark p-5">
 			<div class="flex justify-between items-start mb-2">
@@ -41,14 +32,11 @@
 				<span class="material-symbols-outlined text-text-muted text-[20px]">percent</span>
 			</div>
 			<div class="flex items-baseline gap-2">
-				<p class="text-white text-2xl font-bold tabular-nums">84.2%</p>
-				<span class="text-success text-xs font-medium bg-success/10 px-1.5 py-0.5 rounded flex items-center">
-					<span class="material-symbols-outlined text-[12px] mr-0.5">trending_up</span>
-					2.1%
-				</span>
+				<p class="text-text-muted text-2xl font-bold tabular-nums">--</p>
+				<span class="text-text-muted text-xs font-normal">No fills</span>
 			</div>
 			<div class="mt-3 h-1 w-full bg-background-dark rounded-full overflow-hidden">
-				<div class="h-full bg-success w-[84%]"></div>
+				<div class="h-full bg-slate-600 w-[0%]"></div>
 			</div>
 		</div>
 		<div class="flex flex-col justify-between rounded-xl bg-surface-dark border border-border-dark p-5">
@@ -57,11 +45,11 @@
 				<span class="material-symbols-outlined text-text-muted text-[20px]">warning</span>
 			</div>
 			<div class="flex items-baseline gap-2">
-				<p class="text-white text-2xl font-bold tabular-nums">12.0%</p>
-				<span class="text-success text-xs font-medium bg-success/10 px-1.5 py-0.5 rounded">-0.5%</span>
+				<p class="text-text-muted text-2xl font-bold tabular-nums">--</p>
+				<span class="text-text-muted text-xs font-normal">No data</span>
 			</div>
 			<div class="mt-3 h-1 w-full bg-background-dark rounded-full overflow-hidden">
-				<div class="h-full bg-warning w-[12%]"></div>
+				<div class="h-full bg-slate-600 w-[0%]"></div>
 			</div>
 		</div>
 		<div class="flex flex-col justify-between rounded-xl bg-surface-dark border border-border-dark p-5">
@@ -70,12 +58,11 @@
 				<span class="material-symbols-outlined text-text-muted text-[20px]">price_check</span>
 			</div>
 			<div class="flex items-baseline gap-2">
-				<p class="text-white text-2xl font-bold tabular-nums text-success">+0.05</p>
-				<span class="text-text-muted text-xs font-normal">ticks per lot</span>
+				<p class="text-text-muted text-2xl font-bold tabular-nums">$0.00</p>
+				<span class="text-text-muted text-xs font-normal">No trades</span>
 			</div>
-			<div class="mt-3 flex gap-0.5 h-1 w-full bg-background-dark rounded-full overflow-hidden">
-				<div class="h-full bg-danger w-[20%] opacity-50"></div>
-				<div class="h-full bg-success w-[80%]"></div>
+			<div class="mt-3 h-1 w-full bg-background-dark rounded-full overflow-hidden">
+				<div class="h-full bg-slate-600 w-[0%]"></div>
 			</div>
 		</div>
 		<div class="flex flex-col justify-between rounded-xl bg-surface-dark border border-border-dark p-5">
@@ -84,13 +71,11 @@
 				<span class="material-symbols-outlined text-text-muted text-[20px]">layers</span>
 			</div>
 			<div class="flex items-baseline gap-2">
-				<p class="text-white text-2xl font-bold tabular-nums">Top 10%</p>
-				<span class="text-success text-xs font-medium bg-success/10 px-1.5 py-0.5 rounded">Strong</span>
+				<p class="text-text-muted text-2xl font-bold tabular-nums">--</p>
+				<span class="text-text-muted text-xs font-normal">Inactive</span>
 			</div>
-			<div class="mt-3 h-1 w-full bg-background-dark rounded-full overflow-hidden flex">
-				<div class="h-full bg-primary w-[33%]"></div>
-				<div class="h-full bg-primary/30 w-[33%]"></div>
-				<div class="h-full bg-primary/10 w-[34%]"></div>
+			<div class="mt-3 h-1 w-full bg-background-dark rounded-full overflow-hidden">
+				<div class="h-full bg-slate-600 w-[0%]"></div>
 			</div>
 		</div>
 	</div>
