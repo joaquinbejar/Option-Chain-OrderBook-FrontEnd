@@ -4,6 +4,7 @@
 	const navItems = [
 		{ href: '/controls', icon: 'tune', label: 'Controls' },
 		{ href: '/quotes', icon: 'table_chart', label: 'Quote Matrix' },
+		{ href: '/depth', icon: 'candlestick_chart', label: 'Order Book Depth' },
 		{ href: '/risk', icon: 'bar_chart', label: 'Risk Commander' },
 		{ href: '/executions', icon: 'receipt_long', label: 'Executions' },
 		{ href: '/pnl', icon: 'analytics', label: 'P&L' }

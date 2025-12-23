@@ -110,15 +110,65 @@ export const api = {
 			`/underlyings/${underlying}/expirations/${expiration}/strikes/${strike}/options/${style}/quote`
 		),
 
-	// Controls (to be added to backend)
-	killSwitch: () => fetchApi<{ success: boolean }>('/controls/kill-switch', { method: 'POST' }),
-	updateParameters: (params: { spreadMultiplier?: number; sizeScalar?: number; directionalSkew?: number }) =>
-		fetchApi<{ success: boolean }>('/controls/parameters', {
-			method: 'POST',
-			body: JSON.stringify(params)
+	// Controls
+	getControls: () =>
+		fetchApi<{
+			master_enabled: boolean;
+			spread_multiplier: number;
+			size_scalar: number;
+			directional_skew: number;
+		}>('/controls'),
+	killSwitch: () =>
+		fetchApi<{ success: boolean; message: string; master_enabled: boolean }>('/controls/kill-switch', {
+			method: 'POST'
 		}),
+	enableQuoting: () =>
+		fetchApi<{ success: boolean; message: string; master_enabled: boolean }>('/controls/enable', {
+			method: 'POST'
+		}),
+	updateParameters: (params: { spreadMultiplier?: number; sizeScalar?: number; directionalSkew?: number }) =>
+		fetchApi<{ success: boolean; spread_multiplier: number; size_scalar: number; directional_skew: number }>(
+			'/controls/parameters',
+			{
+				method: 'POST',
+				body: JSON.stringify(params)
+			}
+		),
+	listInstruments: () =>
+		fetchApi<{
+			instruments: Array<{ symbol: string; quoting_enabled: boolean; current_price: number | null }>;
+		}>('/controls/instruments'),
 	toggleInstrument: (symbol: string) =>
-		fetchApi<{ success: boolean }>(`/controls/instrument/${symbol}/toggle`, { method: 'POST' })
+		fetchApi<{ success: boolean; symbol: string; enabled: boolean }>(`/controls/instrument/${symbol}/toggle`, {
+			method: 'POST'
+		}),
+
+	// Prices
+	insertPrice: (data: { symbol: string; price: number; bid?: number; ask?: number; volume?: number; source?: string }) =>
+		fetchApi<{ success: boolean; symbol: string; price_cents: number; timestamp: string }>('/prices', {
+			method: 'POST',
+			body: JSON.stringify(data)
+		}),
+	getLatestPrice: (symbol: string) =>
+		fetchApi<{
+			symbol: string;
+			price: number;
+			bid: number | null;
+			ask: number | null;
+			volume: number | null;
+			timestamp: string;
+		}>(`/prices/${symbol}`),
+	getAllPrices: () =>
+		fetchApi<
+			Array<{
+				symbol: string;
+				price: number;
+				bid: number | null;
+				ask: number | null;
+				volume: number | null;
+				timestamp: string;
+			}>
+		>('/prices')
 };
 
 export interface QuoteResponse {

@@ -2,10 +2,28 @@
 
 A modern SvelteKit-based control console for options market making operations.
 
+## Screenshots
+
+### Quote Matrix
+![Quote Matrix](static/quotepro.png)
+
+### Risk Commander
+![Risk Commander](static/risk-commander.png)
+
+### Execution Monitor
+![Execution Monitor](static/execution-monitor.png)
+
+### Option Pair Depth Monitor
+![Option Pair Depth Monitor](static/option-pair-depth-monitor.png)
+
+### Algo Trader Pro
+![Algo Trader Pro](static/algo-trader-pro.png)
+
 ## Features
 
 - **Operational Controls** (`/controls`) - Master quoting switch, global parameters, instrument toggles
 - **Quote Matrix** (`/quotes`) - Real-time bid/ask display with spread and skew controls
+- **Order Book Depth** (`/depth`) - Call/Put pair order book visualization with Greeks
 - **Risk Commander** (`/risk`) - Portfolio Greeks, inventory management, delta hedging
 - **Execution Monitor** (`/executions`) - Trade audit trail, fill quality metrics
 - **P&L Decomposition** (`/pnl`) - Attribution breakdown by theta, delta, vega, edge
@@ -51,7 +69,8 @@ npm run preview
 src/
 ├── lib/
 │   ├── api/
-│   │   └── client.ts       # REST API client
+│   │   ├── client.ts       # REST API client
+│   │   └── websocket.ts    # WebSocket client for real-time updates
 │   ├── components/
 │   │   ├── Header.svelte   # Top navigation bar
 │   │   └── Sidebar.svelte  # Side navigation
@@ -63,6 +82,7 @@ src/
 │   ├── +page.svelte        # Root redirect
 │   ├── controls/           # Operational Controls
 │   ├── quotes/             # Quote Matrix
+│   ├── depth/              # Order Book Depth Monitor
 │   ├── risk/               # Risk Commander
 │   ├── executions/         # Execution Monitor
 │   └── pnl/                # P&L Decomposition
