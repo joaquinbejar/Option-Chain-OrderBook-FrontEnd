@@ -2,11 +2,11 @@
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api/client';
 
-	let underlyings = $state<string[]>([]);
-	let expirations = $state<string[]>([]);
-	let selectedUnderlying = $state('');
-	let selectedExpiration = $state('');
-	let loading = $state(true);
+	let underlyings: string[] = [];
+	let expirations: string[] = [];
+	let selectedUnderlying = '';
+	let selectedExpiration = '';
+	let loading = true;
 
 	onMount(async () => {
 		try {
@@ -36,7 +36,9 @@
 		}
 	}
 
-	$: if (selectedUnderlying) loadExpirations();
+	async function handleUnderlyingChange() {
+		await loadExpirations();
+	}
 </script>
 
 <div class="p-6 flex flex-col gap-6 max-w-[1600px] mx-auto">
@@ -89,6 +91,7 @@
 			<div class="flex gap-4 items-center">
 				<select 
 					bind:value={selectedUnderlying}
+					on:change={handleUnderlyingChange}
 					class="bg-background-dark border border-border-dark text-white text-sm rounded-lg p-2 font-medium focus:ring-primary focus:border-primary"
 				>
 					{#each underlyings as underlying}
