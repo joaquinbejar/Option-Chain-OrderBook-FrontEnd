@@ -6,7 +6,6 @@
 	let expirations: string[] = [];
 	let selectedUnderlying = '';
 	let selectedExpiration = '';
-	let loading = true;
 
 	onMount(async () => {
 		try {
@@ -18,8 +17,6 @@
 			}
 		} catch (e) {
 			console.error('Failed to load underlyings:', e);
-		} finally {
-			loading = false;
 		}
 	});
 
@@ -94,7 +91,7 @@
 					on:change={handleUnderlyingChange}
 					class="bg-background-dark border border-border-dark text-white text-sm rounded-lg p-2 font-medium focus:ring-primary focus:border-primary"
 				>
-					{#each underlyings as underlying}
+					{#each underlyings as underlying (underlying)}
 						<option value={underlying}>{underlying}</option>
 					{/each}
 				</select>
@@ -102,7 +99,7 @@
 					bind:value={selectedExpiration}
 					class="bg-background-dark border border-border-dark text-white text-sm rounded-lg p-2 font-medium focus:ring-primary focus:border-primary"
 				>
-					{#each expirations as exp}
+					{#each expirations as exp (exp)}
 						<option value={exp}>{exp}</option>
 					{/each}
 				</select>

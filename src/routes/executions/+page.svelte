@@ -1,6 +1,17 @@
 <script lang="ts">
+	interface Execution {
+		time: string;
+		instrument: string;
+		side: string;
+		size: number;
+		execPx: number;
+		theoVal: number;
+		edge: number;
+		latency: number;
+	}
+
 	// Empty executions - no trades yet
-	const executions: any[] = [];
+	const executions: Execution[] = [];
 </script>
 
 <div class="p-6 max-w-[1600px] mx-auto w-full flex flex-col gap-6">
@@ -97,7 +108,7 @@
 					</tr>
 				</thead>
 				<tbody class="divide-y divide-border-dark">
-					{#each executions as exec}
+					{#each executions as exec (exec.time)}
 						<tr class="hover:bg-[#232f48] group transition-colors">
 							<td class="whitespace-nowrap px-4 py-2.5 text-sm text-text-muted tabular-nums">{exec.time}</td>
 							<td class="whitespace-nowrap px-4 py-2.5 text-sm font-bold text-white">{exec.instrument}</td>

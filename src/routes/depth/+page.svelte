@@ -108,7 +108,7 @@
 		loading = false;
 	}
 
-	function transformBookData(resp: any): OrderBookData {
+	function transformBookData(resp: { symbol: string; quote: OrderBookData['quote'] }): OrderBookData {
 		const bidPrice = resp.quote.bid_price || 0;
 		const askPrice = resp.quote.ask_price || 0;
 		const spread = askPrice - bidPrice;
@@ -182,12 +182,13 @@
 		<div class="flex flex-wrap items-end gap-4">
 			<!-- Underlying -->
 			<div class="flex flex-col gap-1.5 min-w-[140px]">
-				<label class="text-text-muted text-xs font-semibold uppercase tracking-wider">Underlying</label>
+				<label for="depth-underlying" class="text-text-muted text-xs font-semibold uppercase tracking-wider">Underlying</label>
 				<select
+					id="depth-underlying"
 					bind:value={selectedUnderlying}
 					class="bg-background-dark border border-border-dark text-white text-sm rounded-lg p-2.5 font-bold focus:ring-primary focus:border-primary"
 				>
-					{#each underlyings as underlying}
+					{#each underlyings as underlying (underlying)}
 						<option value={underlying}>{underlying}</option>
 					{/each}
 				</select>
@@ -195,12 +196,13 @@
 
 			<!-- Expiration -->
 			<div class="flex flex-col gap-1.5 min-w-[140px]">
-				<label class="text-text-muted text-xs font-semibold uppercase tracking-wider">Expiration</label>
+				<label for="depth-expiration" class="text-text-muted text-xs font-semibold uppercase tracking-wider">Expiration</label>
 				<select
+					id="depth-expiration"
 					bind:value={selectedExpiration}
 					class="bg-background-dark border border-border-dark text-white text-sm rounded-lg p-2.5 font-bold focus:ring-primary focus:border-primary"
 				>
-					{#each expirations as exp}
+					{#each expirations as exp (exp)}
 						<option value={exp}>{exp}</option>
 					{/each}
 				</select>
@@ -208,12 +210,13 @@
 
 			<!-- Strike -->
 			<div class="flex flex-col gap-1.5 min-w-[140px]">
-				<label class="text-text-muted text-xs font-semibold uppercase tracking-wider">Strike</label>
+				<label for="depth-strike" class="text-text-muted text-xs font-semibold uppercase tracking-wider">Strike</label>
 				<select
+					id="depth-strike"
 					bind:value={selectedStrike}
 					class="bg-primary/20 border border-primary text-white text-sm rounded-lg p-2.5 font-bold focus:ring-primary focus:border-primary shadow-[0_0_15px_rgba(19,91,236,0.15)]"
 				>
-					{#each strikes as strike}
+					{#each strikes as strike (strike)}
 						<option value={strike}>{strike.toLocaleString()}</option>
 					{/each}
 				</select>
@@ -285,7 +288,7 @@
 
 				<!-- Asks -->
 				<div class="bg-background-dark">
-					{#each [...callBook.asks].reverse() as ask, i}
+					{#each [...callBook.asks].reverse() as ask (ask.price)}
 						{@const maxSize = Math.max(...callBook.asks.map(a => a.total))}
 						<div class="relative grid grid-cols-3 px-4 h-8 items-center text-sm font-medium hover:bg-border-dark/50 cursor-pointer group">
 							<div class="absolute inset-y-0 right-0 bg-danger/10" style="width: {getDepthWidth(ask.total, maxSize)}"></div>
@@ -305,7 +308,7 @@
 
 				<!-- Bids -->
 				<div class="bg-background-dark">
-					{#each callBook.bids as bid}
+					{#each callBook.bids as bid (bid.price)}
 						{@const maxSize = Math.max(...callBook.bids.map(b => b.total))}
 						<div class="relative grid grid-cols-3 px-4 h-8 items-center text-sm font-medium hover:bg-border-dark/50 cursor-pointer group">
 							<div class="absolute inset-y-0 right-0 bg-success/10" style="width: {getDepthWidth(bid.total, maxSize)}"></div>
@@ -368,7 +371,7 @@
 
 				<!-- Asks -->
 				<div class="bg-background-dark">
-					{#each [...putBook.asks].reverse() as ask}
+					{#each [...putBook.asks].reverse() as ask (ask.price)}
 						{@const maxSize = Math.max(...putBook.asks.map(a => a.total))}
 						<div class="relative grid grid-cols-3 px-4 h-8 items-center text-sm font-medium hover:bg-border-dark/50 cursor-pointer group">
 							<div class="absolute inset-y-0 right-0 bg-danger/10" style="width: {getDepthWidth(ask.total, maxSize)}"></div>
@@ -388,7 +391,7 @@
 
 				<!-- Bids -->
 				<div class="bg-background-dark">
-					{#each putBook.bids as bid}
+					{#each putBook.bids as bid (bid.price)}
 						{@const maxSize = Math.max(...putBook.bids.map(b => b.total))}
 						<div class="relative grid grid-cols-3 px-4 h-8 items-center text-sm font-medium hover:bg-border-dark/50 cursor-pointer group">
 							<div class="absolute inset-y-0 right-0 bg-success/10" style="width: {getDepthWidth(bid.total, maxSize)}"></div>
