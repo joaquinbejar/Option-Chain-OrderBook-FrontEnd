@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { controlsStore } from '$lib/stores/controls';
 	import { systemStore } from '$lib/stores/system';
-	import { marketStore, priceList, isConnected } from '$lib/stores/market';
+	import { marketStore, priceList } from '$lib/stores/market';
 
 	let spreadValue = $state(1.0);
 	let sizeValue = $state(100);
@@ -133,6 +133,7 @@
 					>
 				</span>
 				<button
+					aria-label="Toggle master quoting switch"
 					onclick={() => controlsStore.toggleMasterSwitch()}
 					class="relative flex h-[31px] w-[51px] cursor-pointer items-center rounded-full p-0.5 transition-colors duration-200 {$controlsStore.masterSwitch
 						? 'justify-end bg-success'
@@ -145,7 +146,7 @@
 
 		<!-- Live Prices from Backend -->
 		<div class="lg:col-span-2 grid grid-cols-2 sm:grid-cols-3 gap-4">
-			{#each $priceList as priceData}
+			{#each $priceList as priceData (priceData.symbol)}
 				<div class="bg-surface-dark border border-border-dark rounded-xl p-4 flex flex-col gap-3">
 					<div class="flex items-center justify-between text-text-muted">
 						<span class="text-xs font-bold uppercase">{priceData.symbol}</span>
@@ -195,7 +196,7 @@
 			<div class="bg-surface-dark border border-border-dark rounded-xl p-6">
 				<div class="flex justify-between items-start mb-6">
 					<div class="flex flex-col">
-						<label class="text-base font-bold text-white flex items-center gap-2">
+						<label for="ctl-spread" class="text-base font-bold text-white flex items-center gap-2">
 							Spread Multiplier
 							<span class="material-symbols-outlined text-slate-500 text-sm">info</span>
 						</label>
@@ -217,6 +218,7 @@
 						min="0.5"
 						max="5.0"
 						step="0.1"
+						id="ctl-spread"
 						value={spreadValue}
 						oninput={handleSpreadChange}
 						class="flex-1 accent-primary h-2 bg-border-dark rounded-lg appearance-none cursor-pointer"
@@ -230,7 +232,7 @@
 				<!-- Size Scalar -->
 				<div class="bg-surface-dark border border-border-dark rounded-xl p-6">
 					<div class="flex justify-between items-center mb-4">
-						<label class="text-sm font-bold text-white">Global Size Scalar</label>
+						<label for="ctl-size" class="text-sm font-bold text-white">Global Size Scalar</label>
 						<div
 							class="bg-background-dark border border-border-dark rounded px-2 py-1 text-sm font-mono text-white"
 						>
@@ -242,6 +244,7 @@
 						min="0"
 						max="100"
 						step="10"
+						id="ctl-size"
 						value={sizeValue}
 						oninput={handleSizeChange}
 						class="w-full accent-primary h-2 bg-border-dark rounded-lg appearance-none cursor-pointer mb-2"
@@ -252,7 +255,7 @@
 				<!-- Directional Skew -->
 				<div class="bg-surface-dark border border-border-dark rounded-xl p-6">
 					<div class="flex justify-between items-center mb-4">
-						<label class="text-sm font-bold text-white">Directional Skew</label>
+						<label for="ctl-skew" class="text-sm font-bold text-white">Directional Skew</label>
 						<div
 							class="bg-background-dark border border-border-dark rounded px-2 py-1 text-sm font-mono text-white"
 						>
@@ -265,6 +268,7 @@
 							min="-1"
 							max="1"
 							step="0.1"
+							id="ctl-skew"
 							value={skewValue}
 							oninput={handleSkewChange}
 							class="w-full accent-primary h-2 bg-border-dark rounded-lg appearance-none cursor-pointer z-10 relative"
@@ -306,7 +310,7 @@
 						>Per-Asset Quoting Status</span
 					>
 				</div>
-				{#each $controlsStore.instruments as instrument}
+				{#each $controlsStore.instruments as instrument (instrument.symbol)}
 					<div
 						class="p-4 border-b border-border-dark flex items-center justify-between hover:bg-white/5 transition-colors {!instrument.isQuotingEnabled
 							? 'bg-danger/5'
@@ -330,6 +334,7 @@
 							</div>
 						</div>
 						<button
+							aria-label={`Toggle quoting for ${instrument.symbol}`}
 							onclick={() => controlsStore.toggleInstrument(instrument.symbol)}
 							class="relative flex h-6 w-11 cursor-pointer items-center rounded-full p-0.5 transition-colors {instrument.isQuotingEnabled
 								? 'justify-end bg-success'

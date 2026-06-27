@@ -1,6 +1,18 @@
 <script lang="ts">
+	interface Position {
+		symbol: string;
+		name: string;
+		qty: number;
+		markPrice: number;
+		delta: number;
+		gamma: number;
+		vega: number;
+		theta: number;
+		pnl: number;
+	}
+
 	// Empty positions - no active trades
-	const positions: any[] = [];
+	const positions: Position[] = [];
 </script>
 
 <div class="p-4 grid grid-cols-12 grid-rows-[auto_1fr] gap-4 h-full overflow-hidden">
@@ -79,7 +91,7 @@
 					</tr>
 				</thead>
 				<tbody class="text-sm font-medium divide-y divide-border-dark text-slate-300">
-					{#each positions as pos}
+					{#each positions as pos (pos.symbol)}
 						<tr class="hover:bg-white/5 transition-colors group {pos.delta < -100 ? 'border-l-2 border-l-danger bg-danger/5' : pos.delta < 0 ? 'border-l-2 border-l-warning' : ''}">
 							<td class="px-4 py-3">
 								<div class="flex flex-col">

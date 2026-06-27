@@ -1,4 +1,6 @@
 /.idea/
+.DS_Store
+.internalDoc/
 node_modules/
 .svelte-kit/
 build/

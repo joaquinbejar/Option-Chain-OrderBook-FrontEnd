@@ -1,6 +1,17 @@
 <script lang="ts">
+	interface Strategy {
+		strategy: string;
+		symbol: string;
+		totalPnl: number;
+		realized: number;
+		unrealized: number;
+		theta: number;
+		vega: number;
+		delta: number;
+	}
+
 	// Empty strategies - no P&L data yet
-	const strategies: any[] = [];
+	const strategies: Strategy[] = [];
 </script>
 
 <div class="p-6 max-w-[1400px] mx-auto flex flex-col gap-6">
@@ -116,7 +127,7 @@
 					</tr>
 				</thead>
 				<tbody class="divide-y divide-border-dark text-sm">
-					{#each strategies as s}
+					{#each strategies as s (s.strategy)}
 						<tr class="hover:bg-white/5 transition-colors">
 							<td class="px-4 py-3 font-bold text-white">{s.strategy}</td>
 							<td class="px-4 py-3 text-text-muted">{s.symbol}</td>
