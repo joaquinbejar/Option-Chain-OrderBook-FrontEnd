@@ -37,7 +37,6 @@ export interface MarketState {
 	expirations: Map<string, string[]>;
 	strikes: Map<string, number[]>;
 	connected: boolean;
-	lastUpdate: number;
 }
 
 // Initial state — a factory, so reset() cannot hand back Maps that were
@@ -49,8 +48,7 @@ function createInitialState(): MarketState {
 		underlyings: [],
 		expirations: new Map(),
 		strikes: new Map(),
-		connected: false,
-		lastUpdate: 0
+		connected: false
 	};
 }
 
@@ -129,9 +127,12 @@ function createMarketStore() {
 		 * Handle incoming WebSocket messages.
 		 */
 		handleWsMessage(message: WsMessage) {
+			// Frames this store does not model (heartbeat/fill/config) must not
+			// notify subscribers — every notify re-derives the quote matrix.
+			if (message.type !== 'price' && message.type !== 'quote' && message.type !== 'connected') {
+				return;
+			}
 			update((state) => {
-				state.lastUpdate = Date.now();
-
 				switch (message.type) {
 					case 'price': {
 						const { symbol, price_cents } = message.data;
@@ -229,15 +230,15 @@ function createMarketStore() {
 		},
 
 		/**
-		 * Disconnect and cleanup.
+		 * Drop this store's WS subscription. The shared socket stays open —
+		 * system/controls/executions subscribe to the same singleton, and the
+		 * app shell (auth session) owns actually closing it.
 		 */
 		disconnect() {
 			if (wsUnsubscribe) {
 				wsUnsubscribe();
 				wsUnsubscribe = null;
 			}
-			const ws = getWebSocketClient();
-			ws.disconnect();
 			update((state) => ({ ...state, connected: false }));
 		},
 
@@ -268,3 +269,27 @@ export function priceFor(symbol: string) {
  * Get all prices as an array.
  */
 export const priceList = derived(marketStore, ($market) => Array.from($market.prices.values()));
+
+export interface QuoteMatrixRow {
+	/** Strike in cents, as it travels on the wire. */
+	strike: number;
+	call: QuoteData | null;
+	put: QuoteData | null;
+}
+
+/**
+ * Align call/put quotes by strike for the Quote Matrix. Pure — exported for
+ * tests; a missing side is null (renders as `—`, never 0).
+ */
+export function buildQuoteMatrix(
+	quotes: Map<string, QuoteData>,
+	symbol: string,
+	expiration: string,
+	strikes: number[]
+): QuoteMatrixRow[] {
+	return strikes.map((strike) => ({
+		strike,
+		call: quotes.get(`${symbol}:${expiration}:${strike}:call`) ?? null,
+		put: quotes.get(`${symbol}:${expiration}:${strike}:put`) ?? null
+	}));
+}

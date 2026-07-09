@@ -111,6 +111,59 @@ describe('market store — quote frames', () => {
 	});
 });
 
+describe('buildQuoteMatrix', () => {
+	it('aligns call/put quotes by strike; missing sides are null', async () => {
+		const { buildQuoteMatrix } = await import('./market');
+		marketStore.handleWsMessage({
+			type: 'quote',
+			data: {
+				symbol: 'BTC',
+				expiration: '2026-12-18',
+				strike: 5_000_000,
+				style: 'call',
+				bid_price: 1_200,
+				ask_price: 1_300,
+				bid_size: 10,
+				ask_size: 8
+			}
+		});
+
+		const rows = buildQuoteMatrix(
+			get(marketStore).quotes,
+			'BTC',
+			'2026-12-18',
+			[5_000_000, 5_100_000]
+		);
+
+		expect(rows).toHaveLength(2);
+		expect(rows[0].strike).toBe(5_000_000);
+		expect(rows[0].call?.bidPrice).toBe(12); // dollars, converted in the store
+		expect(rows[0].put).toBeNull();
+		expect(rows[1].call).toBeNull();
+		expect(rows[1].put).toBeNull();
+	});
+
+	it('never mixes underlyings or expirations', async () => {
+		const { buildQuoteMatrix } = await import('./market');
+		marketStore.handleWsMessage({
+			type: 'quote',
+			data: {
+				symbol: 'ETH',
+				expiration: '2026-12-18',
+				strike: 5_000_000,
+				style: 'call',
+				bid_price: 100,
+				ask_price: 200,
+				bid_size: 1,
+				ask_size: 1
+			}
+		});
+
+		const rows = buildQuoteMatrix(get(marketStore).quotes, 'BTC', '2026-12-18', [5_000_000]);
+		expect(rows[0].call).toBeNull();
+	});
+});
+
 describe('market store — lifecycle', () => {
 	it('a connected frame marks the store connected', () => {
 		marketStore.handleWsMessage({ type: 'connected', data: { message: 'hi' } });
@@ -143,18 +196,48 @@ describe('market store — lifecycle', () => {
 		expect(fakeWs.subscribe).toHaveBeenCalled();
 	});
 
-	it('disconnect() unsubscribes from the WS so later frames are ignored', async () => {
+	it('disconnect() unsubscribes but leaves the shared socket open', async () => {
 		vi.mocked(api.listUnderlyings).mockResolvedValue({ underlyings: [] });
 		vi.mocked(api.getAllPrices).mockResolvedValue([]);
 
 		await marketStore.init();
 		marketStore.disconnect();
 
-		expect(fakeWs.disconnect).toHaveBeenCalled();
+		// Other stores (system/controls/executions) share this socket.
+		expect(fakeWs.disconnect).not.toHaveBeenCalled();
 		expect(get(marketStore).connected).toBe(false);
 
 		fakeWs.emit({ type: 'price', data: { symbol: 'BTC', price_cents: 100 } });
 		expect(get(marketStore).prices.has('BTC')).toBe(false);
+	});
+
+	it('ignores frames it does not model — no notify, no state change', async () => {
+		vi.mocked(api.listUnderlyings).mockResolvedValue({ underlyings: [] });
+		vi.mocked(api.getAllPrices).mockResolvedValue([]);
+		await marketStore.init();
+
+		let notifications = 0;
+		const unsubscribe = marketStore.subscribe(() => {
+			notifications++;
+		});
+		const baseline = notifications;
+
+		fakeWs.emit({ type: 'heartbeat', data: { timestamp: 1 } });
+		fakeWs.emit({
+			type: 'fill',
+			data: {
+				order_id: 'o',
+				symbol: 'BTC',
+				instrument: 'i',
+				side: 'buy',
+				quantity: 1,
+				price: 1,
+				edge: 0
+			}
+		});
+
+		expect(notifications).toBe(baseline); // no re-derivation for foreign frames
+		unsubscribe();
 	});
 
 	it('a second init() replaces the WS handler instead of stacking it', async () => {
