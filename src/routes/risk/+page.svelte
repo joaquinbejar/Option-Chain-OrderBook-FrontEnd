@@ -11,7 +11,8 @@
 		pnl: number;
 	}
 
-	// Empty positions - no active trades
+	// The backend does not expose portfolio positions yet — this list stays
+	// empty (honest empty state below) until a positions endpoint exists.
 	const positions: Position[] = [];
 </script>
 
@@ -26,10 +27,8 @@
 				<span class="material-symbols-outlined text-text-muted text-sm">pie_chart</span>
 			</div>
 			<div class="flex items-end justify-between">
-				<p class="text-text-muted text-2xl font-bold tabular-nums">0%</p>
-				<div class="h-1.5 w-24 bg-slate-700 rounded-full overflow-hidden">
-					<div class="h-full bg-primary w-[0%]"></div>
-				</div>
+				<p class="text-text-muted text-2xl font-bold tabular-nums">—</p>
+				<span class="text-xs text-text-muted">Not provided by the backend</span>
 			</div>
 		</div>
 		<div
@@ -42,10 +41,8 @@
 				<span class="material-symbols-outlined text-text-muted text-sm">balance</span>
 			</div>
 			<div class="flex items-end justify-between">
-				<p class="text-text-muted text-2xl font-bold tabular-nums">0.00</p>
-				<span class="text-xs font-medium text-text-muted bg-slate-700/50 px-1.5 py-0.5 rounded"
-					>No positions</span
-				>
+				<p class="text-text-muted text-2xl font-bold tabular-nums">—</p>
+				<span class="text-xs text-text-muted">Not provided by the backend</span>
 			</div>
 		</div>
 		<div
@@ -58,8 +55,8 @@
 				<span class="material-symbols-outlined text-text-muted text-sm">show_chart</span>
 			</div>
 			<div class="flex items-end justify-between">
-				<p class="text-text-muted text-2xl font-bold tabular-nums">0</p>
-				<span class="text-xs text-text-muted">No exposure</span>
+				<p class="text-text-muted text-2xl font-bold tabular-nums">—</p>
+				<span class="text-xs text-text-muted">Not provided by the backend</span>
 			</div>
 		</div>
 		<div
@@ -69,11 +66,11 @@
 				<p class="text-text-muted text-xs font-bold uppercase tracking-wider">
 					Active Limits Breached
 				</p>
-				<span class="h-2 w-2 rounded-full bg-success"></span>
+				<span class="material-symbols-outlined text-text-muted text-sm">rule</span>
 			</div>
 			<div class="flex items-end justify-between relative z-10">
-				<p class="text-success text-2xl font-bold tabular-nums">0</p>
-				<span class="text-xs text-text-muted">All clear</span>
+				<p class="text-text-muted text-2xl font-bold tabular-nums">—</p>
+				<span class="text-xs text-text-muted">Not provided by the backend</span>
 			</div>
 		</div>
 	</div>
@@ -85,19 +82,18 @@
 		<div class="flex items-center justify-between p-4 border-b border-border-dark">
 			<div class="flex items-center gap-2">
 				<h3 class="text-white font-bold text-lg">Inventory & Risk Matrix</h3>
-				<span class="px-2 py-0.5 rounded-full bg-slate-700 text-xs text-slate-300 font-medium"
-					>Live</span
-				>
 			</div>
 			<div class="flex gap-2">
 				<div class="relative">
 					<span
 						class="absolute left-2.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-text-muted text-[18px]"
-						>search</span
+						aria-hidden="true">search</span
 					>
 					<input
-						class="h-8 pl-9 pr-3 rounded bg-background-dark border border-border-dark text-xs w-40 text-white focus:outline-none focus:border-primary"
-						placeholder="Filter ticker..."
+						disabled
+						aria-label="Filter ticker"
+						class="h-8 pl-9 pr-3 rounded bg-background-dark border border-border-dark text-xs w-40 text-white focus:outline-none focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed"
+						placeholder="Filter (no positions)"
 						type="text"
 					/>
 				</div>
@@ -168,6 +164,12 @@
 									: 'text-danger'}">{pos.pnl > 0 ? '+' : ''}${pos.pnl.toLocaleString()}</td
 							>
 						</tr>
+					{:else}
+						<tr>
+							<td colspan="8" class="px-4 py-10 text-center text-text-muted text-sm">
+								The backend does not expose portfolio positions yet.
+							</td>
+						</tr>
 					{/each}
 				</tbody>
 			</table>
@@ -180,35 +182,22 @@
 		<div class="bg-surface-dark rounded-xl border border-border-dark p-5 shadow-sm flex-none">
 			<div class="flex items-center justify-between mb-4">
 				<h3 class="text-white font-bold">Delta Hedging</h3>
-				<div class="flex items-center gap-1.5">
-					<span class="h-2 w-2 rounded-full bg-success animate-pulse"></span>
-					<span class="text-xs text-text-muted uppercase font-bold tracking-wider"
-						>Auto-Hedge On</span
-					>
-				</div>
+				<span class="text-xs text-text-muted uppercase font-bold tracking-wider">Not wired</span>
 			</div>
 			<div class="bg-background-dark rounded-lg p-4 mb-4 border border-border-dark">
-				<div class="flex justify-between items-center mb-2">
-					<span class="text-sm text-text-muted font-medium">Net Exposure</span>
-					<span class="text-sm text-white font-bold tabular-nums">+450.20 Delta</span>
-				</div>
-				<div class="flex justify-between items-center mb-3">
-					<span class="text-sm text-text-muted font-medium">Required Action</span>
-					<span class="text-sm text-danger font-bold">SHORT 450 SPY</span>
-				</div>
-				<div class="relative h-2 bg-border-dark rounded-full overflow-hidden mb-1">
-					<div class="absolute top-0 left-0 h-full w-[65%] bg-primary rounded-full"></div>
-				</div>
-				<div class="flex justify-between text-[10px] text-text-muted">
-					<span>Fills: 290/450</span>
-					<span>Working...</span>
-				</div>
+				<p class="text-sm text-text-muted">
+					Auto-hedging status, net exposure and required actions are not exposed by the backend yet.
+					Nothing shown here would be real — this panel activates when the backend provides a
+					hedging surface.
+				</p>
 			</div>
 			<button
-				class="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-border-dark hover:bg-slate-600 text-white text-sm font-bold transition-colors"
+				disabled
+				class="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-border-dark text-white text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 			>
 				<span class="material-symbols-outlined text-[18px]">tune</span>
 				Adjust Hedge Parameters
+				<span class="text-xs text-text-muted font-normal">(not wired)</span>
 			</button>
 		</div>
 
@@ -218,31 +207,10 @@
 				<h3 class="text-white font-bold">P&L Decomposition</h3>
 				<span class="material-symbols-outlined text-text-muted text-sm">bar_chart</span>
 			</div>
-			<div class="flex h-32 gap-3 items-end justify-between px-2">
-				<div class="flex flex-col items-center gap-1 w-full">
-					<div
-						class="w-full bg-success/80 rounded-t h-[80%] hover:bg-success transition-colors"
-					></div>
-					<span class="text-[10px] text-text-muted font-medium">Theta</span>
-				</div>
-				<div class="flex flex-col items-center gap-1 w-full">
-					<div
-						class="w-full bg-danger/80 rounded-t h-[30%] hover:bg-danger transition-colors"
-					></div>
-					<span class="text-[10px] text-text-muted font-medium">Delta</span>
-				</div>
-				<div class="flex flex-col items-center gap-1 w-full">
-					<div
-						class="w-full bg-success/80 rounded-t h-[45%] hover:bg-success transition-colors"
-					></div>
-					<span class="text-[10px] text-text-muted font-medium">Vega</span>
-				</div>
-				<div class="flex flex-col items-center gap-1 w-full">
-					<div
-						class="w-full bg-primary/80 rounded-t h-[60%] hover:bg-primary transition-colors"
-					></div>
-					<span class="text-[10px] text-text-muted font-medium">Edge</span>
-				</div>
+			<div class="h-32 flex items-center justify-center text-center">
+				<p class="text-text-muted text-sm px-4">
+					P&L attribution is not exposed by the backend yet.
+				</p>
 			</div>
 		</div>
 	</div>

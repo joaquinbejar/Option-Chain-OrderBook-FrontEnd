@@ -1,17 +1,33 @@
 <script lang="ts">
-	interface Execution {
-		time: string;
-		instrument: string;
-		side: string;
-		size: number;
-		execPx: number;
-		theoVal: number;
-		edge: number;
-		latency: number;
+	import { onMount } from 'svelte';
+	import { executionsStore, avgEdge, MAX_FILLS } from '$lib/stores/executions';
+	import { systemStore } from '$lib/stores/system';
+
+	onMount(() => {
+		executionsStore.init();
+		return () => executionsStore.disconnect();
+	});
+
+	function formatTime(ms: number): string {
+		return new Date(ms).toLocaleTimeString('en-US', { hour12: false });
 	}
 
-	// Empty executions - no trades yet
-	const executions: Execution[] = [];
+	function formatMoney(value: number): string {
+		return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+	}
+
+	// Desk convention: -$0.05, never $-0.05; exact zero carries no sign.
+	function formatSignedMoney(value: number): string {
+		const sign = value > 0 ? '+' : value < 0 ? '-' : '';
+		return `${sign}$${formatMoney(Math.abs(value))}`;
+	}
+
+	function sideClasses(side: string): string {
+		if (side === 'BUY') return 'bg-success/10 text-success ring-success/20';
+		if (side === 'SELL') return 'bg-danger/10 text-danger ring-danger/20';
+		// Unknown side value — fail muted, not as a sell.
+		return 'bg-border-dark/50 text-text-muted ring-border-dark';
+	}
 </script>
 
 <div class="p-6 max-w-[1600px] mx-auto w-full flex flex-col gap-6">
@@ -20,55 +36,49 @@
 		<div class="flex flex-col gap-1">
 			<h1 class="text-white text-2xl sm:text-3xl font-bold leading-tight">Execution Monitor</h1>
 			<p class="text-text-muted text-sm font-normal max-w-2xl">
-				Real-time audit trail of trade execution quality, fill latency, and P&L edge attribution.
+				Live session fills streamed over the WebSocket while this view is open. Rows are stamped
+				with local receipt time and are not persisted.
 			</p>
 		</div>
-		<div class="flex gap-3">
-			<button
-				class="flex items-center gap-2 h-9 px-4 rounded-lg bg-surface-dark border border-border-dark text-white text-sm font-medium hover:bg-[#2a3649] transition-colors"
+		<div
+			role="status"
+			class="flex items-center gap-2 px-3 py-1.5 rounded-full {!$systemStore.connected
+				? 'bg-danger/10 text-danger'
+				: $systemStore.latencyStale
+					? 'bg-warning/10 text-warning'
+					: 'bg-success/10 text-success'}"
+		>
+			<span
+				class="relative inline-flex rounded-full h-2 w-2 {!$systemStore.connected
+					? 'bg-danger'
+					: $systemStore.latencyStale
+						? 'bg-warning'
+						: 'bg-success'}"
+			></span>
+			<span class="text-xs font-bold uppercase tracking-wider"
+				>{!$systemStore.connected
+					? 'Feed disconnected'
+					: $systemStore.latencyStale
+						? 'Feed stale'
+						: 'Feed connected'}</span
 			>
-				<span class="material-symbols-outlined text-[18px]">pause_circle</span>
-				<span>Pause Algo</span>
-			</button>
-			<button
-				class="flex items-center gap-2 h-9 px-4 rounded-lg bg-primary hover:bg-blue-600 text-white text-sm font-medium transition-colors shadow-lg shadow-blue-900/20"
-			>
-				<span class="material-symbols-outlined text-[18px]">download</span>
-				<span>Export Logs</span>
-			</button>
 		</div>
 	</div>
 
-	<!-- KPI Stats - Empty State -->
+	<!-- KPI Stats -->
 	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 		<div
 			class="flex flex-col justify-between rounded-xl bg-surface-dark border border-border-dark p-5"
 		>
 			<div class="flex justify-between items-start mb-2">
-				<p class="text-text-muted text-sm font-medium">Fill Rate %</p>
-				<span class="material-symbols-outlined text-text-muted text-[20px]">percent</span>
+				<p class="text-text-muted text-sm font-medium">Fills Received</p>
+				<span class="material-symbols-outlined text-text-muted text-[20px]">receipt_long</span>
 			</div>
 			<div class="flex items-baseline gap-2">
-				<p class="text-text-muted text-2xl font-bold tabular-nums">--</p>
-				<span class="text-text-muted text-xs font-normal">No fills</span>
-			</div>
-			<div class="mt-3 h-1 w-full bg-background-dark rounded-full overflow-hidden">
-				<div class="h-full bg-slate-600 w-[0%]"></div>
-			</div>
-		</div>
-		<div
-			class="flex flex-col justify-between rounded-xl bg-surface-dark border border-border-dark p-5"
-		>
-			<div class="flex justify-between items-start mb-2">
-				<p class="text-text-muted text-sm font-medium">Adverse Selection Ratio</p>
-				<span class="material-symbols-outlined text-text-muted text-[20px]">warning</span>
-			</div>
-			<div class="flex items-baseline gap-2">
-				<p class="text-text-muted text-2xl font-bold tabular-nums">--</p>
-				<span class="text-text-muted text-xs font-normal">No data</span>
-			</div>
-			<div class="mt-3 h-1 w-full bg-background-dark rounded-full overflow-hidden">
-				<div class="h-full bg-slate-600 w-[0%]"></div>
+				<p class="text-white text-2xl font-bold tabular-nums">
+					{$executionsStore.totalReceived.toLocaleString()}
+				</p>
+				<span class="text-text-muted text-xs font-normal">since this view opened</span>
 			</div>
 		</div>
 		<div
@@ -79,26 +89,45 @@
 				<span class="material-symbols-outlined text-text-muted text-[20px]">price_check</span>
 			</div>
 			<div class="flex items-baseline gap-2">
-				<p class="text-text-muted text-2xl font-bold tabular-nums">$0.00</p>
-				<span class="text-text-muted text-xs font-normal">No trades</span>
-			</div>
-			<div class="mt-3 h-1 w-full bg-background-dark rounded-full overflow-hidden">
-				<div class="h-full bg-slate-600 w-[0%]"></div>
+				{#if $avgEdge !== null}
+					<p
+						class="text-2xl font-bold tabular-nums {$avgEdge > 0
+							? 'text-success'
+							: $avgEdge < 0
+								? 'text-danger'
+								: 'text-text-muted'}"
+					>
+						{formatSignedMoney($avgEdge)}
+					</p>
+					<span class="text-text-muted text-xs font-normal">per fill</span>
+				{:else}
+					<p class="text-text-muted text-2xl font-bold tabular-nums">—</p>
+					<span class="text-text-muted text-xs font-normal">No fills</span>
+				{/if}
 			</div>
 		</div>
 		<div
 			class="flex flex-col justify-between rounded-xl bg-surface-dark border border-border-dark p-5"
 		>
 			<div class="flex justify-between items-start mb-2">
-				<p class="text-text-muted text-sm font-medium">Est. Queue Position</p>
-				<span class="material-symbols-outlined text-text-muted text-[20px]">layers</span>
+				<p class="text-text-muted text-sm font-medium">Fill Rate %</p>
+				<span class="material-symbols-outlined text-text-muted text-[20px]">percent</span>
 			</div>
 			<div class="flex items-baseline gap-2">
-				<p class="text-text-muted text-2xl font-bold tabular-nums">--</p>
-				<span class="text-text-muted text-xs font-normal">Inactive</span>
+				<p class="text-text-muted text-2xl font-bold tabular-nums">—</p>
+				<span class="text-text-muted text-xs font-normal">Not provided by the backend</span>
 			</div>
-			<div class="mt-3 h-1 w-full bg-background-dark rounded-full overflow-hidden">
-				<div class="h-full bg-slate-600 w-[0%]"></div>
+		</div>
+		<div
+			class="flex flex-col justify-between rounded-xl bg-surface-dark border border-border-dark p-5"
+		>
+			<div class="flex justify-between items-start mb-2">
+				<p class="text-text-muted text-sm font-medium">Adverse Selection</p>
+				<span class="material-symbols-outlined text-text-muted text-[20px]">warning</span>
+			</div>
+			<div class="flex items-baseline gap-2">
+				<p class="text-text-muted text-2xl font-bold tabular-nums">—</p>
+				<span class="text-text-muted text-xs font-normal">Not provided by the backend</span>
 			</div>
 		</div>
 	</div>
@@ -113,7 +142,7 @@
 					<tr class="border-b border-border-dark bg-[#151b26]">
 						<th
 							class="whitespace-nowrap px-4 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider"
-							>Time (UTC)</th
+							>Received (local)</th
 						>
 						<th
 							class="whitespace-nowrap px-4 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider"
@@ -133,94 +162,71 @@
 						>
 						<th
 							class="whitespace-nowrap px-4 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider text-right"
-							>Theo Val</th
-						>
-						<th
-							class="whitespace-nowrap px-4 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider text-right"
 							>Edge</th
-						>
-						<th
-							class="whitespace-nowrap px-4 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider text-right"
-							>Latency</th
 						>
 					</tr>
 				</thead>
 				<tbody class="divide-y divide-border-dark">
-					{#each executions as exec (exec.time)}
-						<tr class="hover:bg-[#232f48] group transition-colors">
+					{#each $executionsStore.fills as fill (fill.seq)}
+						<tr class="hover:bg-[#232f48] transition-colors">
 							<td class="whitespace-nowrap px-4 py-2.5 text-sm text-text-muted tabular-nums"
-								>{exec.time}</td
+								>{formatTime(fill.receivedAt)}</td
 							>
 							<td class="whitespace-nowrap px-4 py-2.5 text-sm font-bold text-white"
-								>{exec.instrument}</td
+								>{fill.instrument}</td
 							>
 							<td class="whitespace-nowrap px-4 py-2.5">
 								<span
-									class="inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ring-1 ring-inset {exec.side ===
-									'BUY'
-										? 'bg-success/10 text-success ring-success/20'
-										: 'bg-danger/10 text-danger ring-danger/20'}">{exec.side}</span
+									class="inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ring-1 ring-inset {sideClasses(
+										fill.side
+									)}">{fill.side}</span
 								>
 							</td>
 							<td class="whitespace-nowrap px-4 py-2.5 text-sm text-white text-right tabular-nums"
-								>{exec.size}</td
+								>{fill.quantity.toLocaleString()}</td
 							>
 							<td
 								class="whitespace-nowrap px-4 py-2.5 text-sm text-white text-right tabular-nums font-medium"
-								>${exec.execPx.toFixed(2)}</td
-							>
-							<td
-								class="whitespace-nowrap px-4 py-2.5 text-sm text-text-muted text-right tabular-nums"
-								>${exec.theoVal.toFixed(2)}</td
+								>${formatMoney(fill.price)}</td
 							>
 							<td class="whitespace-nowrap px-4 py-2.5 text-right">
-								<div class="flex items-center justify-end gap-1">
-									<span
-										class="text-sm font-bold tabular-nums {exec.edge > 0
-											? 'text-success'
-											: exec.edge < 0
-												? 'text-danger'
-												: 'text-text-muted'}"
-										>{exec.edge > 0 ? '+' : ''}${exec.edge.toFixed(2)}</span
-									>
-									<div
-										class="h-1.5 w-1.5 rounded-full {exec.edge > 0
-											? 'bg-success'
-											: exec.edge < 0
-												? 'bg-danger'
-												: 'bg-slate-600'}"
-									></div>
-								</div>
+								<span
+									class="text-sm font-bold tabular-nums {fill.edge > 0
+										? 'text-success'
+										: fill.edge < 0
+											? 'text-danger'
+											: 'text-text-muted'}">{formatSignedMoney(fill.edge)}</span
+								>
 							</td>
-							<td
-								class="whitespace-nowrap px-4 py-2.5 text-sm text-right tabular-nums {exec.latency >
-								100
-									? 'text-warning font-bold'
-									: 'text-text-muted'}">{exec.latency}ms</td
-							>
+						</tr>
+					{:else}
+						<tr>
+							<td colspan="6" class="px-4 py-10 text-center text-text-muted text-sm">
+								{#if $systemStore.connected}
+									No fills received while this view has been open — executions stream in live as the
+									engine trades.
+								{:else}
+									Feed disconnected — fills cannot arrive until the WebSocket reconnects.
+								{/if}
+							</td>
 						</tr>
 					{/each}
 				</tbody>
 			</table>
 		</div>
-		<!-- Pagination -->
+		<!-- Footer: honest counts, no fake pagination -->
 		<div
 			class="flex items-center justify-between border-t border-border-dark bg-[#151b26] px-4 py-3 sm:px-6"
 		>
-			<div>
-				<p class="text-sm text-text-muted">
-					Showing <span class="font-medium text-white">1</span> to
-					<span class="font-medium text-white">9</span>
-					of <span class="font-medium text-white">1,248</span> fills
-				</p>
-			</div>
-			<div class="flex gap-1">
-				<button class="px-3 py-1 rounded bg-primary text-white text-sm font-semibold">1</button>
-				<button class="px-3 py-1 rounded text-text-muted hover:bg-[#232f48] text-sm">2</button>
-				<button class="px-3 py-1 rounded text-text-muted hover:bg-[#232f48] text-sm">3</button>
-				<span class="px-3 py-1 text-text-muted text-sm">...</span>
-				<button class="px-3 py-1 rounded text-text-muted hover:bg-[#232f48] text-sm">124</button>
-			</div>
+			<p class="text-sm text-text-muted">
+				Showing <span class="font-medium text-white">{$executionsStore.fills.length}</span> of
+				<span class="font-medium text-white">{$executionsStore.totalReceived.toLocaleString()}</span
+				>
+				fills received since this view opened
+			</p>
+			{#if $executionsStore.totalReceived > MAX_FILLS}
+				<p class="text-xs text-text-muted">Oldest rows beyond {MAX_FILLS} are dropped</p>
+			{/if}
 		</div>
 	</div>
 </div>
