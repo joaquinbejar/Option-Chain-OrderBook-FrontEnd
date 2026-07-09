@@ -9,6 +9,8 @@ export interface ControlsState {
 	directionalSkew: number;
 	instruments: InstrumentStatus[];
 	loading: boolean;
+	/** Last command failure, user-visible; null when everything is confirmed. */
+	error: string | null;
 }
 
 export interface InstrumentStatus {
@@ -30,8 +32,64 @@ function createControlsStore() {
 		sizeScalar: 100,
 		directionalSkew: 0,
 		instruments: [],
-		loading: true
+		loading: true,
+		error: null
 	});
+
+	type ParamField = 'spreadMultiplier' | 'sizeScalar' | 'directionalSkew';
+
+	// Per-field request generation: a slider drag fires one request per input
+	// tick, and responses may resolve out of order. Only the latest request
+	// for a field may write back — stale echoes/failures are ignored, so the
+	// thumb never snaps backward under the pointer.
+	const paramGeneration: Record<ParamField, number> = {
+		spreadMultiplier: 0,
+		sizeScalar: 0,
+		directionalSkew: 0
+	};
+
+	/**
+	 * Optimistically apply one quoting parameter, then reconcile that field
+	 * only: on success adopt the backend's echoed value (its clamping wins);
+	 * on failure revert the field to its snapshot and surface a visible
+	 * error. Concurrent updates to the other fields are never touched.
+	 */
+	const applyParameter = async (
+		field: ParamField,
+		value: number,
+		request: { spreadMultiplier?: number; sizeScalar?: number; directionalSkew?: number },
+		label: string
+	) => {
+		const generation = ++paramGeneration[field];
+		let previous = value;
+		update((s) => {
+			previous = s[field];
+			return { ...s, [field]: value, error: null };
+		});
+
+		try {
+			const result = await api.updateParameters(request);
+			if (generation !== paramGeneration[field]) return; // superseded by a newer tick
+			const echo: Record<ParamField, number> = {
+				spreadMultiplier: result.spread_multiplier,
+				// The POST response echoes size_scalar as a percent (×100).
+				sizeScalar: result.size_scalar,
+				directionalSkew: result.directional_skew
+			};
+			update((s) => ({ ...s, [field]: echo[field] }));
+		} catch (e) {
+			if (generation !== paramGeneration[field]) return; // superseded by a newer tick
+			console.error(`Failed to update ${label}:`, e);
+			// The snapshot may itself be an optimistic value from an earlier
+			// in-flight tick; the periodic WS config broadcast reconciles any
+			// residual drift to backend truth.
+			update((s) => ({
+				...s,
+				[field]: previous,
+				error: `Failed to update the ${label} — reverted to the last confirmed value.`
+			}));
+		}
+	};
 
 	// Subscribe to WebSocket config updates
 	if (typeof window !== 'undefined') {
@@ -90,7 +148,11 @@ function createControlsStore() {
 				}
 			} catch (e) {
 				console.error('Failed to initialize controls:', e);
-				update((s) => ({ ...s, loading: false }));
+				update((s) => ({
+					...s,
+					loading: false,
+					error: 'Failed to load controls from the backend.'
+				}));
 			}
 		},
 		/**
@@ -101,11 +163,18 @@ function createControlsStore() {
 		halt: async () => {
 			if (switchPending) return;
 			switchPending = true;
+			// A new command clears the previous banner; success leaves the error
+			// field alone so an unrelated flow's failure is never masked.
+			update((s) => ({ ...s, error: null }));
 			try {
 				const result = await api.killSwitch();
 				update((s) => ({ ...s, masterSwitch: result.master_enabled }));
 			} catch (e) {
 				console.error('Failed to fire the kill switch:', e);
+				update((s) => ({
+					...s,
+					error: 'Kill switch command failed — quoting state is unchanged.'
+				}));
 			} finally {
 				switchPending = false;
 			}
@@ -115,41 +184,29 @@ function createControlsStore() {
 		resume: async () => {
 			if (switchPending) return;
 			switchPending = true;
+			update((s) => ({ ...s, error: null }));
 			try {
 				const result = await api.enableQuoting();
 				update((s) => ({ ...s, masterSwitch: result.master_enabled }));
 			} catch (e) {
 				console.error('Failed to re-enable quoting:', e);
+				update((s) => ({
+					...s,
+					error: 'Enable-quoting command failed — quoting state is unchanged.'
+				}));
 			} finally {
 				switchPending = false;
 			}
 		},
-		setSpreadMultiplier: async (value: number) => {
-			update((s) => ({ ...s, spreadMultiplier: value }));
-			try {
-				await api.updateParameters({ spreadMultiplier: value });
-			} catch (e) {
-				console.error('Failed to update spread multiplier:', e);
-			}
-		},
-		setSizeScalar: async (value: number) => {
-			update((s) => ({ ...s, sizeScalar: value }));
-			try {
-				// The write API expects percent [0, 100] — no conversion here.
-				await api.updateParameters({ sizeScalar: value });
-			} catch (e) {
-				console.error('Failed to update size scalar:', e);
-			}
-		},
-		setDirectionalSkew: async (value: number) => {
-			update((s) => ({ ...s, directionalSkew: value }));
-			try {
-				await api.updateParameters({ directionalSkew: value });
-			} catch (e) {
-				console.error('Failed to update directional skew:', e);
-			}
-		},
+		setSpreadMultiplier: (value: number) =>
+			applyParameter('spreadMultiplier', value, { spreadMultiplier: value }, 'spread multiplier'),
+		// The write API expects percent [0, 100] — no conversion here.
+		setSizeScalar: (value: number) =>
+			applyParameter('sizeScalar', value, { sizeScalar: value }, 'size scalar'),
+		setDirectionalSkew: (value: number) =>
+			applyParameter('directionalSkew', value, { directionalSkew: value }, 'directional skew'),
 		toggleInstrument: async (symbol: string) => {
+			update((s) => ({ ...s, error: null }));
 			try {
 				const result = await api.toggleInstrument(symbol);
 				update((s) => ({
@@ -160,8 +217,13 @@ function createControlsStore() {
 				}));
 			} catch (e) {
 				console.error('Failed to toggle instrument:', e);
+				update((s) => ({
+					...s,
+					error: `Failed to toggle quoting for ${symbol} — its state is unchanged.`
+				}));
 			}
 		},
+		clearError: () => update((s) => ({ ...s, error: null })),
 		reset: () =>
 			set({
 				masterSwitch: true,
@@ -169,7 +231,8 @@ function createControlsStore() {
 				sizeScalar: 100,
 				directionalSkew: 0,
 				instruments: [],
-				loading: true
+				loading: true,
+				error: null
 			})
 	};
 }

@@ -187,6 +187,141 @@ describe('controls store — parameters', () => {
 		expect(api.updateParameters).toHaveBeenCalledWith({ spreadMultiplier: 2 });
 	});
 
+	it('reverts the optimistic value and surfaces an error when the backend rejects', async () => {
+		await initStore();
+		expect(get(controlsStore).spreadMultiplier).toBe(1.5);
+
+		vi.mocked(api.updateParameters).mockRejectedValue(new Error('400 out of range'));
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+
+		await controlsStore.setSpreadMultiplier(4.5);
+
+		const s = get(controlsStore);
+		expect(s.spreadMultiplier).toBe(1.5); // reverted, not lying
+		expect(s.error).toMatch(/spread multiplier/);
+	});
+
+	it('adopts the backend echo on success — server-side clamping wins', async () => {
+		await initStore();
+		vi.mocked(api.updateParameters).mockResolvedValue({
+			success: true,
+			spread_multiplier: 5, // backend clamped 7 down to its max
+			size_scalar: 80,
+			directional_skew: 0.1
+		});
+
+		await controlsStore.setSpreadMultiplier(7);
+
+		const s = get(controlsStore);
+		expect(s.spreadMultiplier).toBe(5);
+		expect(s.error).toBeNull();
+	});
+
+	it('a failed skew update reverts and a later success clears the error', async () => {
+		await initStore();
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		vi.mocked(api.updateParameters).mockRejectedValueOnce(new Error('boom'));
+
+		await controlsStore.setDirectionalSkew(0.9);
+		expect(get(controlsStore).directionalSkew).toBe(0.1); // reverted
+		expect(get(controlsStore).error).toMatch(/directional skew/);
+
+		vi.mocked(api.updateParameters).mockResolvedValue({
+			success: true,
+			spread_multiplier: 1.5,
+			size_scalar: 80,
+			directional_skew: 0.5
+		});
+		await controlsStore.setDirectionalSkew(0.5);
+
+		expect(get(controlsStore).directionalSkew).toBe(0.5);
+		expect(get(controlsStore).error).toBeNull();
+	});
+
+	it('ignores a stale response that resolves after a newer tick — no backward snap', async () => {
+		await initStore();
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+
+		type Echo = {
+			success: boolean;
+			spread_multiplier: number;
+			size_scalar: number;
+			directional_skew: number;
+		};
+		let rejectFirst!: (e: Error) => void;
+		vi.mocked(api.updateParameters)
+			.mockReturnValueOnce(
+				new Promise<Echo>((_, reject) => {
+					rejectFirst = reject;
+				})
+			)
+			.mockResolvedValueOnce({
+				success: true,
+				spread_multiplier: 2.5,
+				size_scalar: 80,
+				directional_skew: 0.1
+			});
+
+		const first = controlsStore.setSpreadMultiplier(2.0); // will fail late
+		const second = controlsStore.setSpreadMultiplier(2.5); // confirms first
+		await second;
+		rejectFirst(new Error('slow failure of the superseded tick'));
+		await first;
+
+		const s = get(controlsStore);
+		expect(s.spreadMultiplier).toBe(2.5); // stale failure did not revert or error
+		expect(s.error).toBeNull();
+	});
+
+	it('a failing update reverts only its own field, never a concurrent one', async () => {
+		await initStore();
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+
+		type Echo = {
+			success: boolean;
+			spread_multiplier: number;
+			size_scalar: number;
+			directional_skew: number;
+		};
+		let rejectSpread!: (e: Error) => void;
+		vi.mocked(api.updateParameters)
+			.mockReturnValueOnce(
+				new Promise<Echo>((_, reject) => {
+					rejectSpread = reject;
+				})
+			)
+			.mockResolvedValueOnce({
+				success: true,
+				spread_multiplier: 1.5,
+				size_scalar: 50,
+				directional_skew: 0.1
+			});
+
+		const spread = controlsStore.setSpreadMultiplier(3.0); // in flight, will fail
+		const size = controlsStore.setSizeScalar(50); // concurrent, succeeds
+		await size;
+		rejectSpread(new Error('backend rejected the spread'));
+		await spread;
+
+		const s = get(controlsStore);
+		expect(s.spreadMultiplier).toBe(1.5); // reverted to its own snapshot
+		expect(s.sizeScalar).toBe(50); // untouched by the spread revert
+		expect(s.error).toMatch(/spread multiplier/);
+	});
+
+	it('clearError() dismisses a surfaced failure', async () => {
+		await initStore();
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		vi.mocked(api.updateParameters).mockRejectedValue(new Error('boom'));
+
+		await controlsStore.setSizeScalar(10);
+		expect(get(controlsStore).error).not.toBeNull();
+		expect(get(controlsStore).sizeScalar).toBeCloseTo(80); // reverted
+
+		controlsStore.clearError();
+		expect(get(controlsStore).error).toBeNull();
+	});
+
 	it('size_scalar round-trips: fraction on read, percent on write', async () => {
 		// GET /controls returned 0.8 (fraction) — the store holds 80 (percent).
 		await initStore();

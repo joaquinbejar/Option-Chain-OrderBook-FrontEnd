@@ -5,9 +5,6 @@
 	import { marketStore, priceList } from '$lib/stores/market';
 	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 
-	let spreadValue = $state(1.0);
-	let sizeValue = $state(100);
-	let skewValue = $state(0);
 	let showHaltConfirm = $state(false);
 
 	function handleMasterToggle() {
@@ -38,22 +35,18 @@
 		return () => marketStore.disconnect();
 	});
 
+	// Sliders render the store value directly, so a reconciled/reverted value
+	// (or a WS config update) snaps the control back to backend truth.
 	function handleSpreadChange(e: Event) {
-		const target = e.target as HTMLInputElement;
-		spreadValue = parseFloat(target.value);
-		controlsStore.setSpreadMultiplier(spreadValue);
+		controlsStore.setSpreadMultiplier(parseFloat((e.target as HTMLInputElement).value));
 	}
 
 	function handleSizeChange(e: Event) {
-		const target = e.target as HTMLInputElement;
-		sizeValue = parseInt(target.value);
-		controlsStore.setSizeScalar(sizeValue);
+		controlsStore.setSizeScalar(parseInt((e.target as HTMLInputElement).value));
 	}
 
 	function handleSkewChange(e: Event) {
-		const target = e.target as HTMLInputElement;
-		skewValue = parseFloat(target.value);
-		controlsStore.setDirectionalSkew(skewValue);
+		controlsStore.setDirectionalSkew(parseFloat((e.target as HTMLInputElement).value));
 	}
 </script>
 
@@ -116,6 +109,26 @@
 			</div>
 		</div>
 	</div>
+
+	<!-- Command failures surface here, not just in the console -->
+	{#if $controlsStore.error}
+		<div
+			role="alert"
+			class="flex items-center justify-between gap-4 bg-danger/10 border border-danger/30 rounded-lg px-4 py-3"
+		>
+			<span class="flex items-center gap-2 text-sm font-medium text-danger">
+				<span class="material-symbols-outlined text-base" aria-hidden="true">error</span>
+				{$controlsStore.error}
+			</span>
+			<button
+				aria-label="Dismiss error"
+				onclick={() => controlsStore.clearError()}
+				class="text-danger hover:text-white transition-colors flex items-center"
+			>
+				<span class="material-symbols-outlined text-base">close</span>
+			</button>
+		</div>
+	{/if}
 
 	<!-- Top Row: Master Switch & Key Metrics -->
 	<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -241,7 +254,9 @@
 					<div
 						class="flex items-center gap-2 bg-background-dark border border-border-dark rounded-lg px-3 py-1"
 					>
-						<span class="text-xl font-mono font-bold text-primary">{spreadValue.toFixed(2)}</span>
+						<span class="text-xl font-mono font-bold text-primary"
+							>{$controlsStore.spreadMultiplier.toFixed(2)}</span
+						>
 						<span class="text-xs text-slate-500">x</span>
 					</div>
 				</div>
@@ -253,7 +268,7 @@
 						max="5.0"
 						step="0.1"
 						id="ctl-spread"
-						value={spreadValue}
+						value={$controlsStore.spreadMultiplier}
 						oninput={handleSpreadChange}
 						class="flex-1 accent-primary h-2 bg-border-dark rounded-lg appearance-none cursor-pointer"
 					/>
@@ -270,7 +285,7 @@
 						<div
 							class="bg-background-dark border border-border-dark rounded px-2 py-1 text-sm font-mono text-white"
 						>
-							{sizeValue}%
+							{$controlsStore.sizeScalar}%
 						</div>
 					</div>
 					<input
@@ -279,7 +294,7 @@
 						max="100"
 						step="10"
 						id="ctl-size"
-						value={sizeValue}
+						value={$controlsStore.sizeScalar}
 						oninput={handleSizeChange}
 						class="w-full accent-primary h-2 bg-border-dark rounded-lg appearance-none cursor-pointer mb-2"
 					/>
@@ -293,7 +308,7 @@
 						<div
 							class="bg-background-dark border border-border-dark rounded px-2 py-1 text-sm font-mono text-white"
 						>
-							{skewValue.toFixed(2)}
+							{$controlsStore.directionalSkew.toFixed(2)}
 						</div>
 					</div>
 					<div class="relative pt-6">
@@ -303,7 +318,7 @@
 							max="1"
 							step="0.1"
 							id="ctl-skew"
-							value={skewValue}
+							value={$controlsStore.directionalSkew}
 							oninput={handleSkewChange}
 							class="w-full accent-primary h-2 bg-border-dark rounded-lg appearance-none cursor-pointer z-10 relative"
 						/>
