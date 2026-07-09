@@ -107,15 +107,6 @@
 					>
 				</div>
 			</div>
-			<div
-				class="flex items-center gap-3 bg-surface-dark border border-border-dark rounded-full px-4 py-2"
-			>
-				<span class="material-symbols-outlined text-slate-400 text-sm">memory</span>
-				<div class="flex flex-col leading-none">
-					<span class="text-[10px] text-slate-400 uppercase font-bold">Engine Load</span>
-					<span class="text-sm font-mono text-white">{$systemStore.engineLoad}%</span>
-				</div>
-			</div>
 		</div>
 	</div>
 
