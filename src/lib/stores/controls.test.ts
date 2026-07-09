@@ -173,10 +173,11 @@ describe('controls store — halt / resume intents', () => {
 describe('controls store — parameters', () => {
 	it('setSpreadMultiplier updates optimistically and calls the API', async () => {
 		await initStore();
+		// Unlike GET /controls, the POST response echoes size_scalar ×100.
 		vi.mocked(api.updateParameters).mockResolvedValue({
 			success: true,
 			spread_multiplier: 2,
-			size_scalar: 0.8,
+			size_scalar: 80,
 			directional_skew: 0.1
 		});
 
@@ -191,6 +192,7 @@ describe('controls store — parameters', () => {
 		await initStore();
 		expect(get(controlsStore).sizeScalar).toBeCloseTo(80);
 
+		// The POST response echoes size_scalar as a percent (×100), unlike GET.
 		vi.mocked(api.updateParameters).mockResolvedValue({
 			success: true,
 			spread_multiplier: 1.5,

@@ -112,7 +112,9 @@
 		symbol: string;
 		quote: OrderBookData['quote'];
 	}): OrderBookData {
-		// Backend quote prices are integer cents — convert to dollars here, once.
+		// Backend quote prices are integer cents — convert to dollars here,
+		// once. (Interim conversion site: #4 replaces this page's fabricated
+		// levels with store-fed data, moving the boundary into the store.)
 		const bidPrice = (resp.quote.bid_price ?? 0) / 100;
 		const askPrice = (resp.quote.ask_price ?? 0) / 100;
 		const spread = askPrice - bidPrice;
@@ -124,11 +126,13 @@
 			asks: generateLevels(askPrice, resp.quote.ask_size, 'ask'),
 			spread,
 			spreadPercent,
+			// Rebuilt explicitly from the computed dollar values so nothing
+			// cents-denominated (or backend-only fields) leaks through.
 			quote: {
-				...resp.quote,
-				// Keep the stored quote in dollars too, so no consumer re-divides.
-				bid_price: resp.quote.bid_price !== null ? resp.quote.bid_price / 100 : null,
-				ask_price: resp.quote.ask_price !== null ? resp.quote.ask_price / 100 : null
+				bid_price: resp.quote.bid_price !== null ? bidPrice : null,
+				ask_price: resp.quote.ask_price !== null ? askPrice : null,
+				bid_size: resp.quote.bid_size,
+				ask_size: resp.quote.ask_size
 			}
 		};
 	}

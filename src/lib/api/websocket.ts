@@ -10,7 +10,10 @@ export interface WsQuoteMessage {
 	data: {
 		symbol: string;
 		expiration: string;
-		/** Strike in cents. */
+		/**
+		 * Strike in cents — the same u64 the REST strikes endpoints return, so
+		 * WS and REST strike values key against each other without conversion.
+		 */
 		strike: number;
 		style: string;
 		/** Bid price in cents. */
