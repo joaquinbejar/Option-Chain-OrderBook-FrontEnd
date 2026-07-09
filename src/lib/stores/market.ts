@@ -77,7 +77,8 @@ function createMarketStore() {
 				update((state) => {
 					state.underlyings = underlyingsRes.underlyings;
 
-					// Initialize prices
+					// Initialize prices — GET /prices speaks DOLLARS, unlike the
+					// cents-based option-quote surfaces. No division here.
 					for (const p of pricesRes) {
 						state.prices.set(p.symbol, {
 							symbol: p.symbol,
@@ -130,6 +131,8 @@ function createMarketStore() {
 				switch (message.type) {
 					case 'price': {
 						const { symbol, price_cents } = message.data;
+						// Cents → dollars: this is the single conversion site for
+						// WS underlying prices.
 						const price = price_cents / 100;
 						const existing = state.prices.get(symbol);
 						const previousPrice = existing?.price ?? price;
@@ -151,6 +154,8 @@ function createMarketStore() {
 						const { symbol, expiration, strike, style, bid_price, ask_price, bid_size, ask_size } =
 							message.data;
 						const key = `${symbol}:${expiration}:${strike}:${style}`;
+						// Cents → dollars: this is the single conversion site for
+						// WS option quotes.
 						const bidPrice = bid_price / 100;
 						const askPrice = ask_price / 100;
 						const spread = askPrice - bidPrice;

@@ -42,6 +42,8 @@ function createControlsStore() {
 					...s,
 					masterSwitch: msg.data.enabled,
 					spreadMultiplier: msg.data.spread_multiplier,
+					// Backend reads expose size_scalar as a fraction [0, 1]; the UI
+					// (and the write API) speak percent [0, 100].
 					sizeScalar: msg.data.size_scalar * 100,
 					directionalSkew: msg.data.directional_skew
 				}));
@@ -69,6 +71,7 @@ function createControlsStore() {
 					...s,
 					masterSwitch: controls.master_enabled,
 					spreadMultiplier: controls.spread_multiplier,
+					// Fraction [0, 1] on read → percent [0, 100] in the store/UI.
 					sizeScalar: controls.size_scalar * 100,
 					directionalSkew: controls.directional_skew,
 					instruments: instrumentsResp.instruments.map((i) => ({
@@ -132,6 +135,7 @@ function createControlsStore() {
 		setSizeScalar: async (value: number) => {
 			update((s) => ({ ...s, sizeScalar: value }));
 			try {
+				// The write API expects percent [0, 100] — no conversion here.
 				await api.updateParameters({ sizeScalar: value });
 			} catch (e) {
 				console.error('Failed to update size scalar:', e);
