@@ -1,10 +1,32 @@
 <script lang="ts">
 	import { systemStore } from '$lib/stores/system';
 	import { controlsStore } from '$lib/stores/controls';
+	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
+
+	let showKillConfirm = $state(false);
 
 	function handleKillSwitch() {
-		controlsStore.toggleMasterSwitch();
+		if ($controlsStore.masterSwitch) {
+			// Halting is destructive (cancels all open orders) — confirm first.
+			showKillConfirm = true;
+		} else {
+			// Resuming quoting stays frictionless.
+			controlsStore.resume();
+		}
 	}
+
+	function confirmKill() {
+		showKillConfirm = false;
+		controlsStore.halt();
+	}
+
+	// If quoting halts while the dialog is open (another client, a backend
+	// risk kill), the question is stale — dismiss it.
+	$effect(() => {
+		if (!$controlsStore.masterSwitch) {
+			showKillConfirm = false;
+		}
+	});
 </script>
 
 <header
@@ -59,9 +81,19 @@
 		</button>
 		<div class="h-6 w-px bg-border-dark mx-1"></div>
 		<button
+			aria-label="Notifications"
 			class="w-9 h-9 flex items-center justify-center rounded-lg bg-[#232f48] text-white hover:bg-primary hover:text-white transition-colors"
 		>
 			<span class="material-symbols-outlined text-[20px]">notifications</span>
 		</button>
 	</div>
 </header>
+
+<ConfirmDialog
+	open={showKillConfirm}
+	title="Halt all quoting?"
+	message="This fires the kill switch: every open order is cancelled immediately and no new quotes are sent until quoting is re-enabled."
+	confirmLabel="Halt quoting"
+	onconfirm={confirmKill}
+	oncancel={() => (showKillConfirm = false)}
+/>

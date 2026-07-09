@@ -85,8 +85,8 @@ describe('controls store — init', () => {
 	});
 });
 
-describe('controls store — master switch', () => {
-	it('fires the kill switch when enabled and reflects the API result', async () => {
+describe('controls store — halt / resume intents', () => {
+	it('halt() fires the kill switch and reflects the API result', async () => {
 		await initStore();
 		vi.mocked(api.killSwitch).mockResolvedValue({
 			success: true,
@@ -94,31 +94,69 @@ describe('controls store — master switch', () => {
 			master_enabled: false
 		});
 
-		await controlsStore.toggleMasterSwitch();
+		await controlsStore.halt();
 
 		expect(api.killSwitch).toHaveBeenCalledOnce();
 		expect(api.enableQuoting).not.toHaveBeenCalled();
 		expect(get(controlsStore).masterSwitch).toBe(false);
 	});
 
-	it('re-enables quoting when disabled and reflects the API result', async () => {
+	it('resume() re-enables quoting and reflects the API result', async () => {
 		await initStore();
-		vi.mocked(api.killSwitch).mockResolvedValue({
-			success: true,
-			message: 'killed',
-			master_enabled: false
-		});
-		await controlsStore.toggleMasterSwitch();
-
 		vi.mocked(api.enableQuoting).mockResolvedValue({
 			success: true,
 			message: 'enabled',
 			master_enabled: true
 		});
-		await controlsStore.toggleMasterSwitch();
+
+		await controlsStore.resume();
 
 		expect(api.enableQuoting).toHaveBeenCalledOnce();
+		expect(api.killSwitch).not.toHaveBeenCalled();
 		expect(get(controlsStore).masterSwitch).toBe(true);
+	});
+
+	it('halt() never inverts into an enable when state flipped under the dialog', async () => {
+		await initStore();
+		// Another client halts while the local confirm dialog is open.
+		fakeWs.emit({
+			type: 'config',
+			data: { enabled: false, spread_multiplier: 1.5, size_scalar: 0.8, directional_skew: 0.1 }
+		});
+		expect(get(controlsStore).masterSwitch).toBe(false);
+
+		vi.mocked(api.killSwitch).mockResolvedValue({
+			success: true,
+			message: 'killed',
+			master_enabled: false
+		});
+
+		// The operator's confirmed intent was HALT — it must stay a halt.
+		await controlsStore.halt();
+
+		expect(api.killSwitch).toHaveBeenCalledOnce();
+		expect(api.enableQuoting).not.toHaveBeenCalled();
+	});
+
+	it('ignores a second command while the first is still in flight', async () => {
+		await initStore();
+		let resolveKill!: (v: { success: boolean; message: string; master_enabled: boolean }) => void;
+		vi.mocked(api.killSwitch).mockReturnValue(
+			new Promise((resolve) => {
+				resolveKill = resolve;
+			})
+		);
+
+		const first = controlsStore.halt();
+		const second = controlsStore.halt(); // double-click on confirm
+		const opposite = controlsStore.resume(); // and a stray resume click
+
+		resolveKill({ success: true, message: 'killed', master_enabled: false });
+		await Promise.all([first, second, opposite]);
+
+		expect(api.killSwitch).toHaveBeenCalledOnce();
+		expect(api.enableQuoting).not.toHaveBeenCalled();
+		expect(get(controlsStore).masterSwitch).toBe(false);
 	});
 
 	it('keeps the current state when the API call fails — the UI must not lie', async () => {
@@ -126,7 +164,7 @@ describe('controls store — master switch', () => {
 		vi.mocked(api.killSwitch).mockRejectedValue(new Error('backend down'));
 		vi.spyOn(console, 'error').mockImplementation(() => {});
 
-		await controlsStore.toggleMasterSwitch();
+		await controlsStore.halt();
 
 		expect(get(controlsStore).masterSwitch).toBe(true);
 	});
