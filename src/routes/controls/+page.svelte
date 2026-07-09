@@ -31,9 +31,8 @@
 	});
 
 	onMount(() => {
-		// controlsStore.init() loads the real backend config + instruments; the
-		// store's WS subscription is module-scoped (teardown tracked in #16).
-		controlsStore.init();
+		// controlsStore is initialized by the app shell (+layout) — the Header
+		// kill switch needs it on every route.
 		marketStore.init();
 		return () => marketStore.disconnect();
 	});
