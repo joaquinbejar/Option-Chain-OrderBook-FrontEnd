@@ -31,6 +31,9 @@
 	});
 
 	onMount(() => {
+		// controlsStore.init() loads the real backend config + instruments; the
+		// store's WS subscription is module-scoped (teardown tracked in #16).
+		controlsStore.init();
 		marketStore.init();
 		return () => marketStore.disconnect();
 	});

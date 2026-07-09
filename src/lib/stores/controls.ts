@@ -86,7 +86,7 @@ function createControlsStore() {
 			update((s) => ({
 				...s,
 				[field]: previous,
-				error: `Failed to update the ${label} — reverted to the last confirmed value.`
+				error: `Failed to update the ${label} — the change was not applied.`
 			}));
 		}
 	};
