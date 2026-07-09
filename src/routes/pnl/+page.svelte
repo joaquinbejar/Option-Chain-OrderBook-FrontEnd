@@ -19,12 +19,23 @@
 	<div class="flex flex-wrap items-center justify-between gap-4">
 		<div class="flex flex-col gap-1">
 			<h1 class="text-white text-2xl sm:text-3xl font-bold leading-tight">P&L Decomposition</h1>
-			<p class="text-text-muted text-sm">Understand where P&L is coming from: theta, delta, vega, spread capture.</p>
+			<p class="text-text-muted text-sm">
+				Understand where P&L is coming from: theta, delta, vega, spread capture.
+			</p>
 		</div>
 		<div class="flex gap-2">
-			<button class="h-9 px-4 rounded-lg bg-primary/20 border border-primary/30 text-primary text-sm font-bold">Total</button>
-			<button class="h-9 px-4 rounded-lg bg-surface-dark border border-border-dark text-text-muted hover:text-white text-sm font-medium">Realized</button>
-			<button class="h-9 px-4 rounded-lg bg-surface-dark border border-border-dark text-text-muted hover:text-white text-sm font-medium">Unrealized</button>
+			<button
+				class="h-9 px-4 rounded-lg bg-primary/20 border border-primary/30 text-primary text-sm font-bold"
+				>Total</button
+			>
+			<button
+				class="h-9 px-4 rounded-lg bg-surface-dark border border-border-dark text-text-muted hover:text-white text-sm font-medium"
+				>Realized</button
+			>
+			<button
+				class="h-9 px-4 rounded-lg bg-surface-dark border border-border-dark text-text-muted hover:text-white text-sm font-medium"
+				>Unrealized</button
+			>
 		</div>
 	</div>
 
@@ -131,12 +142,35 @@
 						<tr class="hover:bg-white/5 transition-colors">
 							<td class="px-4 py-3 font-bold text-white">{s.strategy}</td>
 							<td class="px-4 py-3 text-text-muted">{s.symbol}</td>
-							<td class="px-4 py-3 text-right font-bold tabular-nums {s.totalPnl > 0 ? 'text-success' : 'text-danger'}">{s.totalPnl > 0 ? '+' : ''}${s.totalPnl.toLocaleString()}</td>
-							<td class="px-4 py-3 text-right tabular-nums text-text-muted">{s.realized > 0 ? '+' : ''}${s.realized.toLocaleString()}</td>
-							<td class="px-4 py-3 text-right tabular-nums {s.unrealized > 0 ? 'text-success' : 'text-danger'}">{s.unrealized > 0 ? '+' : ''}${s.unrealized.toLocaleString()}</td>
-							<td class="px-4 py-3 text-right tabular-nums {s.theta > 0 ? 'text-success' : 'text-danger'}">{s.theta > 0 ? '+' : ''}{s.theta.toLocaleString()}</td>
-							<td class="px-4 py-3 text-right tabular-nums {s.vega > 0 ? 'text-success' : 'text-danger'}">{s.vega > 0 ? '+' : ''}{s.vega.toLocaleString()}</td>
-							<td class="px-4 py-3 text-right tabular-nums {s.delta > 0 ? 'text-success' : 'text-danger'}">{s.delta > 0 ? '+' : ''}{s.delta}</td>
+							<td
+								class="px-4 py-3 text-right font-bold tabular-nums {s.totalPnl > 0
+									? 'text-success'
+									: 'text-danger'}">{s.totalPnl > 0 ? '+' : ''}${s.totalPnl.toLocaleString()}</td
+							>
+							<td class="px-4 py-3 text-right tabular-nums text-text-muted"
+								>{s.realized > 0 ? '+' : ''}${s.realized.toLocaleString()}</td
+							>
+							<td
+								class="px-4 py-3 text-right tabular-nums {s.unrealized > 0
+									? 'text-success'
+									: 'text-danger'}"
+								>{s.unrealized > 0 ? '+' : ''}${s.unrealized.toLocaleString()}</td
+							>
+							<td
+								class="px-4 py-3 text-right tabular-nums {s.theta > 0
+									? 'text-success'
+									: 'text-danger'}">{s.theta > 0 ? '+' : ''}{s.theta.toLocaleString()}</td
+							>
+							<td
+								class="px-4 py-3 text-right tabular-nums {s.vega > 0
+									? 'text-success'
+									: 'text-danger'}">{s.vega > 0 ? '+' : ''}{s.vega.toLocaleString()}</td
+							>
+							<td
+								class="px-4 py-3 text-right tabular-nums {s.delta > 0
+									? 'text-success'
+									: 'text-danger'}">{s.delta > 0 ? '+' : ''}{s.delta}</td
+							>
 						</tr>
 					{/each}
 				</tbody>

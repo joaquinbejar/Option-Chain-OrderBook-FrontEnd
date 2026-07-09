@@ -137,7 +137,8 @@ function createMarketStore() {
 							priceCents: price_cents,
 							previousPrice,
 							change: price - previousPrice,
-							changePercent: previousPrice > 0 ? ((price - previousPrice) / previousPrice) * 100 : 0,
+							changePercent:
+								previousPrice > 0 ? ((price - previousPrice) / previousPrice) * 100 : 0,
 							timestamp: new Date().toISOString()
 						});
 						break;

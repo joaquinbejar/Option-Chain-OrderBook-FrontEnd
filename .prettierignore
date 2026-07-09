@@ -5,3 +5,9 @@ dist/
 package-lock.json
 static/
 *.png
+
+# Local working documents, not tracked in git (absent from CI checkouts)
+.claude/
+CLAUDE.md
+AGENTS.md
+rules/

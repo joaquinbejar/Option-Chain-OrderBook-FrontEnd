@@ -45,9 +45,7 @@ function createControlsStore() {
 				update((s) => ({
 					...s,
 					instruments: s.instruments.map((i) =>
-						i.symbol === msg.data.symbol
-							? { ...i, currentPrice: msg.data.price_cents / 100 }
-							: i
+						i.symbol === msg.data.symbol ? { ...i, currentPrice: msg.data.price_cents / 100 } : i
 					)
 				}));
 			}

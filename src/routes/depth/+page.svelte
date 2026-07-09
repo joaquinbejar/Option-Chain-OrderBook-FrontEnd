@@ -108,7 +108,10 @@
 		loading = false;
 	}
 
-	function transformBookData(resp: { symbol: string; quote: OrderBookData['quote'] }): OrderBookData {
+	function transformBookData(resp: {
+		symbol: string;
+		quote: OrderBookData['quote'];
+	}): OrderBookData {
 		const bidPrice = resp.quote.bid_price || 0;
 		const askPrice = resp.quote.ask_price || 0;
 		const spread = askPrice - bidPrice;
@@ -182,7 +185,10 @@
 		<div class="flex flex-wrap items-end gap-4">
 			<!-- Underlying -->
 			<div class="flex flex-col gap-1.5 min-w-[140px]">
-				<label for="depth-underlying" class="text-text-muted text-xs font-semibold uppercase tracking-wider">Underlying</label>
+				<label
+					for="depth-underlying"
+					class="text-text-muted text-xs font-semibold uppercase tracking-wider">Underlying</label
+				>
 				<select
 					id="depth-underlying"
 					bind:value={selectedUnderlying}
@@ -196,7 +202,10 @@
 
 			<!-- Expiration -->
 			<div class="flex flex-col gap-1.5 min-w-[140px]">
-				<label for="depth-expiration" class="text-text-muted text-xs font-semibold uppercase tracking-wider">Expiration</label>
+				<label
+					for="depth-expiration"
+					class="text-text-muted text-xs font-semibold uppercase tracking-wider">Expiration</label
+				>
 				<select
 					id="depth-expiration"
 					bind:value={selectedExpiration}
@@ -210,7 +219,10 @@
 
 			<!-- Strike -->
 			<div class="flex flex-col gap-1.5 min-w-[140px]">
-				<label for="depth-strike" class="text-text-muted text-xs font-semibold uppercase tracking-wider">Strike</label>
+				<label
+					for="depth-strike"
+					class="text-text-muted text-xs font-semibold uppercase tracking-wider">Strike</label
+				>
 				<select
 					id="depth-strike"
 					bind:value={selectedStrike}
@@ -224,7 +236,9 @@
 
 			<!-- Stats Summary -->
 			<div class="flex-1 flex justify-end">
-				<div class="flex gap-4 items-center p-3 rounded-lg bg-border-dark/50 border border-border-dark/30">
+				<div
+					class="flex gap-4 items-center p-3 rounded-lg bg-border-dark/50 border border-border-dark/30"
+				>
 					<div class="flex flex-col px-3 border-r border-border-dark">
 						<span class="text-text-muted text-xs">Mark Price</span>
 						<span class="text-white text-lg font-bold tabular-nums">$26,950.50</span>
@@ -249,38 +263,53 @@
 		<!-- CALL Order Book -->
 		<div class="bg-surface-dark rounded-xl border border-border-dark overflow-hidden">
 			<!-- Header -->
-			<div class="px-5 py-4 border-b border-border-dark bg-gradient-to-r from-primary/10 to-transparent flex justify-between items-center">
+			<div
+				class="px-5 py-4 border-b border-border-dark bg-gradient-to-r from-primary/10 to-transparent flex justify-between items-center"
+			>
 				<div>
 					<h3 class="text-primary text-xl font-bold">CALL {selectedStrike.toLocaleString()}</h3>
 					<p class="text-text-muted text-xs mt-0.5">Expires in 2d 14h</p>
 				</div>
-				<span class="px-2 py-1 rounded bg-green-900/30 text-green-400 text-xs font-bold border border-green-900/50">ITM 98%</span>
+				<span
+					class="px-2 py-1 rounded bg-green-900/30 text-green-400 text-xs font-bold border border-green-900/50"
+					>ITM 98%</span
+				>
 			</div>
 
 			<!-- Greeks -->
 			<div class="grid grid-cols-4 gap-px bg-border-dark border-b border-border-dark">
 				<div class="bg-surface-dark p-3 text-center">
 					<div class="text-text-muted text-[10px] uppercase tracking-wider mb-1">Delta</div>
-					<div class="text-white text-sm font-medium tabular-nums">{callGreeks.delta.toFixed(2)}</div>
+					<div class="text-white text-sm font-medium tabular-nums">
+						{callGreeks.delta.toFixed(2)}
+					</div>
 				</div>
 				<div class="bg-surface-dark p-3 text-center">
 					<div class="text-text-muted text-[10px] uppercase tracking-wider mb-1">Gamma</div>
-					<div class="text-white text-sm font-medium tabular-nums">{callGreeks.gamma.toFixed(2)}</div>
+					<div class="text-white text-sm font-medium tabular-nums">
+						{callGreeks.gamma.toFixed(2)}
+					</div>
 				</div>
 				<div class="bg-surface-dark p-3 text-center">
 					<div class="text-text-muted text-[10px] uppercase tracking-wider mb-1">Vega</div>
-					<div class="text-white text-sm font-medium tabular-nums">{callGreeks.vega.toFixed(1)}</div>
+					<div class="text-white text-sm font-medium tabular-nums">
+						{callGreeks.vega.toFixed(1)}
+					</div>
 				</div>
 				<div class="bg-surface-dark p-3 text-center">
 					<div class="text-text-muted text-[10px] uppercase tracking-wider mb-1">Theta</div>
-					<div class="text-danger text-sm font-medium tabular-nums">{callGreeks.theta.toFixed(1)}</div>
+					<div class="text-danger text-sm font-medium tabular-nums">
+						{callGreeks.theta.toFixed(1)}
+					</div>
 				</div>
 			</div>
 
 			<!-- Order Book -->
 			{#if callBook}
 				<!-- Header -->
-				<div class="grid grid-cols-3 px-4 py-2 bg-background-dark text-text-muted text-xs font-semibold uppercase tracking-wider border-b border-border-dark">
+				<div
+					class="grid grid-cols-3 px-4 py-2 bg-background-dark text-text-muted text-xs font-semibold uppercase tracking-wider border-b border-border-dark"
+				>
 					<div class="text-left">Total</div>
 					<div class="text-center">Price (USD)</div>
 					<div class="text-right">Size</div>
@@ -289,31 +318,48 @@
 				<!-- Asks -->
 				<div class="bg-background-dark">
 					{#each [...callBook.asks].reverse() as ask (ask.price)}
-						{@const maxSize = Math.max(...callBook.asks.map(a => a.total))}
-						<div class="relative grid grid-cols-3 px-4 h-8 items-center text-sm font-medium hover:bg-border-dark/50 cursor-pointer group">
-							<div class="absolute inset-y-0 right-0 bg-danger/10" style="width: {getDepthWidth(ask.total, maxSize)}"></div>
+						{@const maxSize = Math.max(...callBook.asks.map((a) => a.total))}
+						<div
+							class="relative grid grid-cols-3 px-4 h-8 items-center text-sm font-medium hover:bg-border-dark/50 cursor-pointer group"
+						>
+							<div
+								class="absolute inset-y-0 right-0 bg-danger/10"
+								style="width: {getDepthWidth(ask.total, maxSize)}"
+							></div>
 							<div class="z-10 text-white/50 tabular-nums">{ask.total.toFixed(2)}</div>
-							<div class="z-10 text-danger text-center tabular-nums group-hover:font-bold">{ask.price.toFixed(2)}</div>
+							<div class="z-10 text-danger text-center tabular-nums group-hover:font-bold">
+								{ask.price.toFixed(2)}
+							</div>
 							<div class="z-10 text-white text-right tabular-nums">{ask.size.toFixed(2)}</div>
 						</div>
 					{/each}
 				</div>
 
 				<!-- Spread -->
-				<div class="py-2 bg-surface-dark border-y border-border-dark flex justify-center items-center gap-4">
+				<div
+					class="py-2 bg-surface-dark border-y border-border-dark flex justify-center items-center gap-4"
+				>
 					<span class="text-text-muted text-xs font-medium uppercase tracking-widest">Spread</span>
-					<span class="text-white text-sm font-bold tabular-nums">{callBook.spread.toFixed(2)}</span>
+					<span class="text-white text-sm font-bold tabular-nums">{callBook.spread.toFixed(2)}</span
+					>
 					<span class="text-text-muted text-xs">({callBook.spreadPercent.toFixed(2)}%)</span>
 				</div>
 
 				<!-- Bids -->
 				<div class="bg-background-dark">
 					{#each callBook.bids as bid (bid.price)}
-						{@const maxSize = Math.max(...callBook.bids.map(b => b.total))}
-						<div class="relative grid grid-cols-3 px-4 h-8 items-center text-sm font-medium hover:bg-border-dark/50 cursor-pointer group">
-							<div class="absolute inset-y-0 right-0 bg-success/10" style="width: {getDepthWidth(bid.total, maxSize)}"></div>
+						{@const maxSize = Math.max(...callBook.bids.map((b) => b.total))}
+						<div
+							class="relative grid grid-cols-3 px-4 h-8 items-center text-sm font-medium hover:bg-border-dark/50 cursor-pointer group"
+						>
+							<div
+								class="absolute inset-y-0 right-0 bg-success/10"
+								style="width: {getDepthWidth(bid.total, maxSize)}"
+							></div>
 							<div class="z-10 text-white/50 tabular-nums">{bid.total.toFixed(2)}</div>
-							<div class="z-10 text-success text-center tabular-nums group-hover:font-bold">{bid.price.toFixed(2)}</div>
+							<div class="z-10 text-success text-center tabular-nums group-hover:font-bold">
+								{bid.price.toFixed(2)}
+							</div>
 							<div class="z-10 text-white text-right tabular-nums">{bid.size.toFixed(2)}</div>
 						</div>
 					{/each}
@@ -332,23 +378,32 @@
 		<!-- PUT Order Book -->
 		<div class="bg-surface-dark rounded-xl border border-border-dark overflow-hidden">
 			<!-- Header -->
-			<div class="px-5 py-4 border-b border-border-dark bg-gradient-to-r from-purple-600/10 to-transparent flex justify-between items-center">
+			<div
+				class="px-5 py-4 border-b border-border-dark bg-gradient-to-r from-purple-600/10 to-transparent flex justify-between items-center"
+			>
 				<div>
 					<h3 class="text-purple-400 text-xl font-bold">PUT {selectedStrike.toLocaleString()}</h3>
 					<p class="text-text-muted text-xs mt-0.5">Expires in 2d 14h</p>
 				</div>
-				<span class="px-2 py-1 rounded bg-red-900/30 text-red-400 text-xs font-bold border border-red-900/50">OTM 2%</span>
+				<span
+					class="px-2 py-1 rounded bg-red-900/30 text-red-400 text-xs font-bold border border-red-900/50"
+					>OTM 2%</span
+				>
 			</div>
 
 			<!-- Greeks -->
 			<div class="grid grid-cols-4 gap-px bg-border-dark border-b border-border-dark">
 				<div class="bg-surface-dark p-3 text-center">
 					<div class="text-text-muted text-[10px] uppercase tracking-wider mb-1">Delta</div>
-					<div class="text-white text-sm font-medium tabular-nums">{putGreeks.delta.toFixed(2)}</div>
+					<div class="text-white text-sm font-medium tabular-nums">
+						{putGreeks.delta.toFixed(2)}
+					</div>
 				</div>
 				<div class="bg-surface-dark p-3 text-center">
 					<div class="text-text-muted text-[10px] uppercase tracking-wider mb-1">Gamma</div>
-					<div class="text-white text-sm font-medium tabular-nums">{putGreeks.gamma.toFixed(2)}</div>
+					<div class="text-white text-sm font-medium tabular-nums">
+						{putGreeks.gamma.toFixed(2)}
+					</div>
 				</div>
 				<div class="bg-surface-dark p-3 text-center">
 					<div class="text-text-muted text-[10px] uppercase tracking-wider mb-1">Vega</div>
@@ -356,14 +411,18 @@
 				</div>
 				<div class="bg-surface-dark p-3 text-center">
 					<div class="text-text-muted text-[10px] uppercase tracking-wider mb-1">Theta</div>
-					<div class="text-danger text-sm font-medium tabular-nums">{putGreeks.theta.toFixed(1)}</div>
+					<div class="text-danger text-sm font-medium tabular-nums">
+						{putGreeks.theta.toFixed(1)}
+					</div>
 				</div>
 			</div>
 
 			<!-- Order Book -->
 			{#if putBook}
 				<!-- Header -->
-				<div class="grid grid-cols-3 px-4 py-2 bg-background-dark text-text-muted text-xs font-semibold uppercase tracking-wider border-b border-border-dark">
+				<div
+					class="grid grid-cols-3 px-4 py-2 bg-background-dark text-text-muted text-xs font-semibold uppercase tracking-wider border-b border-border-dark"
+				>
 					<div class="text-left">Total</div>
 					<div class="text-center">Price (USD)</div>
 					<div class="text-right">Size</div>
@@ -372,18 +431,27 @@
 				<!-- Asks -->
 				<div class="bg-background-dark">
 					{#each [...putBook.asks].reverse() as ask (ask.price)}
-						{@const maxSize = Math.max(...putBook.asks.map(a => a.total))}
-						<div class="relative grid grid-cols-3 px-4 h-8 items-center text-sm font-medium hover:bg-border-dark/50 cursor-pointer group">
-							<div class="absolute inset-y-0 right-0 bg-danger/10" style="width: {getDepthWidth(ask.total, maxSize)}"></div>
+						{@const maxSize = Math.max(...putBook.asks.map((a) => a.total))}
+						<div
+							class="relative grid grid-cols-3 px-4 h-8 items-center text-sm font-medium hover:bg-border-dark/50 cursor-pointer group"
+						>
+							<div
+								class="absolute inset-y-0 right-0 bg-danger/10"
+								style="width: {getDepthWidth(ask.total, maxSize)}"
+							></div>
 							<div class="z-10 text-white/50 tabular-nums">{ask.total.toFixed(2)}</div>
-							<div class="z-10 text-danger text-center tabular-nums group-hover:font-bold">{ask.price.toFixed(2)}</div>
+							<div class="z-10 text-danger text-center tabular-nums group-hover:font-bold">
+								{ask.price.toFixed(2)}
+							</div>
 							<div class="z-10 text-white text-right tabular-nums">{ask.size.toFixed(2)}</div>
 						</div>
 					{/each}
 				</div>
 
 				<!-- Spread -->
-				<div class="py-2 bg-surface-dark border-y border-border-dark flex justify-center items-center gap-4">
+				<div
+					class="py-2 bg-surface-dark border-y border-border-dark flex justify-center items-center gap-4"
+				>
 					<span class="text-text-muted text-xs font-medium uppercase tracking-widest">Spread</span>
 					<span class="text-white text-sm font-bold tabular-nums">{putBook.spread.toFixed(2)}</span>
 					<span class="text-text-muted text-xs">({putBook.spreadPercent.toFixed(2)}%)</span>
@@ -392,11 +460,18 @@
 				<!-- Bids -->
 				<div class="bg-background-dark">
 					{#each putBook.bids as bid (bid.price)}
-						{@const maxSize = Math.max(...putBook.bids.map(b => b.total))}
-						<div class="relative grid grid-cols-3 px-4 h-8 items-center text-sm font-medium hover:bg-border-dark/50 cursor-pointer group">
-							<div class="absolute inset-y-0 right-0 bg-success/10" style="width: {getDepthWidth(bid.total, maxSize)}"></div>
+						{@const maxSize = Math.max(...putBook.bids.map((b) => b.total))}
+						<div
+							class="relative grid grid-cols-3 px-4 h-8 items-center text-sm font-medium hover:bg-border-dark/50 cursor-pointer group"
+						>
+							<div
+								class="absolute inset-y-0 right-0 bg-success/10"
+								style="width: {getDepthWidth(bid.total, maxSize)}"
+							></div>
 							<div class="z-10 text-white/50 tabular-nums">{bid.total.toFixed(2)}</div>
-							<div class="z-10 text-success text-center tabular-nums group-hover:font-bold">{bid.price.toFixed(2)}</div>
+							<div class="z-10 text-success text-center tabular-nums group-hover:font-bold">
+								{bid.price.toFixed(2)}
+							</div>
 							<div class="z-10 text-white text-right tabular-nums">{bid.size.toFixed(2)}</div>
 						</div>
 					{/each}

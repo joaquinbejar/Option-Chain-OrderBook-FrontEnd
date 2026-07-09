@@ -19,7 +19,7 @@ function createSystemStore() {
 	// Track WebSocket connection and heartbeats
 	if (typeof window !== 'undefined') {
 		const ws = getWebSocketClient();
-		
+
 		// Check connection status periodically
 		setInterval(() => {
 			update((s) => ({ ...s, connected: ws.isConnected }));
