@@ -138,6 +138,8 @@ The Vite dev server proxies `/api` and `/ws` to `http://localhost:8080` by defau
 
 ## Design System
 
+Tokens are defined CSS-first in the `@theme` block of `src/app.css` (TailwindCSS v4).
+
 ### Colors
 
 | Token             | Value     | Usage                       |
