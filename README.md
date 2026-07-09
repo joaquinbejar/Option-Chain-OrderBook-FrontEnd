@@ -2,36 +2,20 @@
 
 A modern SvelteKit-based control console for options market making operations.
 
-## Screenshots
-
-### Quote Matrix
-
-![Quote Matrix](static/quotepro.png)
-
-### Risk Commander
-
-![Risk Commander](static/risk-commander.png)
-
-### Execution Monitor
-
-![Execution Monitor](static/execution-monitor.png)
-
-### Option Pair Depth Monitor
-
-![Option Pair Depth Monitor](static/option-pair-depth-monitor.png)
-
-### Algo Trader Pro
-
-![Algo Trader Pro](static/algo-trader-pro.png)
+<!--
+Screenshots were removed on purpose: the old captures showed fabricated
+data (fake fills, fake hedging, fake P&L) that the app no longer renders.
+Re-add fresh captures against a live backend once the honest pages settle.
+-->
 
 ## Features
 
 - **Operational Controls** (`/controls`) - Master quoting switch, global parameters, instrument toggles
 - **Quote Matrix** (`/quotes`) - Real-time bid/ask display with spread and skew controls
 - **Order Book Depth** (`/depth`) - Call/Put pair order book depth from point-in-time backend snapshots (per-option Greeks and IV are not yet provided by the backend and render as `—`)
-- **Risk Commander** (`/risk`) - Portfolio Greeks, inventory management, delta hedging
-- **Execution Monitor** (`/executions`) - Trade audit trail, fill quality metrics
-- **P&L Decomposition** (`/pnl`) - Attribution breakdown by theta, delta, vega, edge
+- **Risk Commander** (`/risk`) - Layout for portfolio Greeks / inventory / hedging; the backend does not expose positions or hedging yet, so every widget shows an honest placeholder
+- **Execution Monitor** (`/executions`) - Live session fills streamed over the WebSocket `fill` frames (empty until the engine trades; no fills history endpoint yet)
+- **P&L Decomposition** (`/pnl`) - Layout for attribution by theta, delta, vega and spread capture; P&L is not exposed by the backend yet, so the page shows honest placeholders
 
 ## Tech Stack
 
@@ -113,6 +97,8 @@ The frontend expects a REST API at `/api/v1` with the following endpoints:
 - `POST /controls/parameters` - Update quoting parameters
 - `GET /controls/instruments` - List instruments with quoting status
 - `POST /controls/instrument/:symbol/toggle` - Toggle instrument quoting
+
+A WebSocket at `/ws` pushes real-time frames (`quote`, `price`, `fill`, `config`, `connected`, `heartbeat`); option prices on the wire are integer cents. `/executions` is fed entirely by the `fill` frames.
 
 ## Configuration
 
