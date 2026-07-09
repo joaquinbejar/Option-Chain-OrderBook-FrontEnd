@@ -28,7 +28,7 @@ A modern SvelteKit-based control console for options market making operations.
 
 - **Operational Controls** (`/controls`) - Master quoting switch, global parameters, instrument toggles
 - **Quote Matrix** (`/quotes`) - Real-time bid/ask display with spread and skew controls
-- **Order Book Depth** (`/depth`) - Call/Put pair order book visualization with Greeks
+- **Order Book Depth** (`/depth`) - Call/Put pair order book depth from point-in-time backend snapshots (per-option Greeks and IV are not yet provided by the backend and render as `—`)
 - **Risk Commander** (`/risk`) - Portfolio Greeks, inventory management, delta hedging
 - **Execution Monitor** (`/executions`) - Trade audit trail, fill quality metrics
 - **P&L Decomposition** (`/pnl`) - Attribution breakdown by theta, delta, vega, edge
@@ -100,13 +100,18 @@ src/
 
 The frontend expects a REST API at `/api/v1` with the following endpoints:
 
-- `GET /health` - Health check
+- `GET /health` - Health check (served unprefixed, not under `/api/v1`)
 - `GET /stats` - Global statistics
 - `GET /underlyings` - List underlyings
 - `GET /underlyings/:symbol/expirations` - List expirations
 - `GET /underlyings/:symbol/expirations/:exp/strikes` - List strikes
+- `GET /underlyings/:symbol/expirations/:exp/strikes/:strike/options/:style/snapshot?depth=N` - Per-level order-book snapshot (prices in integer cents)
+- `GET /prices/:symbol` - Latest underlying price (dollars)
+- `GET /controls` - Current quoting controls
 - `POST /controls/kill-switch` - Emergency kill switch
+- `POST /controls/enable` - Re-enable quoting
 - `POST /controls/parameters` - Update quoting parameters
+- `GET /controls/instruments` - List instruments with quoting status
 - `POST /controls/instrument/:symbol/toggle` - Toggle instrument quoting
 
 ## Configuration
