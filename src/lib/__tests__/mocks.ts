@@ -7,12 +7,17 @@ import type { WsMessage, WsMessageHandler } from '$lib/api/websocket';
  */
 export function makeFakeWsClient() {
 	const handlers = new Set<WsMessageHandler>();
+	let connected = true;
 	return {
 		connect: vi.fn(),
 		disconnect: vi.fn(),
 		send: vi.fn(),
 		get isConnected() {
-			return true;
+			return connected;
+		},
+		/** test helper — simulate the socket dropping or coming back */
+		setConnected(value: boolean) {
+			connected = value;
 		},
 		subscribe: vi.fn((h: WsMessageHandler) => {
 			handlers.add(h);

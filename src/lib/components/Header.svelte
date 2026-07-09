@@ -60,9 +60,18 @@
 					{$systemStore.connected ? 'Connected' : 'Disconnected'}
 				</span>
 			</div>
-			<div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-dark">
-				<span class="material-symbols-outlined text-primary text-sm">speed</span>
-				<span class="text-xs text-white font-mono">{$systemStore.latency}ms</span>
+			<div
+				class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-dark"
+				title={$systemStore.latencyStale ? 'No recent heartbeat — latency unknown' : 'Latency'}
+			>
+				<span
+					class="material-symbols-outlined text-sm {$systemStore.latencyStale
+						? 'text-warning'
+						: 'text-primary'}">speed</span
+				>
+				<span class="text-xs font-mono {$systemStore.latencyStale ? 'text-warning' : 'text-white'}"
+					>{$systemStore.latencyStale ? 'stale' : `${$systemStore.latency}ms`}</span
+				>
 			</div>
 		</div>
 	</div>

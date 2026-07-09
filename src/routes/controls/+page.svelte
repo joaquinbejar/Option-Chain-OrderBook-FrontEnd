@@ -95,10 +95,17 @@
 			<div
 				class="flex items-center gap-3 bg-surface-dark border border-border-dark rounded-full px-4 py-2"
 			>
-				<span class="material-symbols-outlined text-primary text-sm">speed</span>
+				<span
+					class="material-symbols-outlined text-sm {$systemStore.latencyStale
+						? 'text-warning'
+						: 'text-primary'}">speed</span
+				>
 				<div class="flex flex-col leading-none">
 					<span class="text-[10px] text-slate-400 uppercase font-bold">Latency</span>
-					<span class="text-sm font-mono text-white">{$systemStore.latency}ms</span>
+					<span
+						class="text-sm font-mono {$systemStore.latencyStale ? 'text-warning' : 'text-white'}"
+						>{$systemStore.latencyStale ? 'stale' : `${$systemStore.latency}ms`}</span
+					>
 				</div>
 			</div>
 			<div
