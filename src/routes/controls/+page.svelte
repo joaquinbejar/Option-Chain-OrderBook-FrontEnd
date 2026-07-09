@@ -395,9 +395,11 @@
 								{instrument.symbol.charAt(0)}
 							</div>
 							<div class="flex flex-col">
-								<span class="text-sm font-bold text-white">{instrument.displayName}</span>
+								<span class="text-sm font-bold text-white">{instrument.symbol}</span>
 								{#if instrument.isQuotingEnabled}
-									<span class="text-xs text-text-muted">{instrument.exchanges.join(' & ')}</span>
+									<span class="text-xs text-success font-medium flex items-center gap-1">
+										<span class="material-symbols-outlined text-[10px]">play_arrow</span> Quoting
+									</span>
 								{:else}
 									<span class="text-xs text-danger font-medium flex items-center gap-1">
 										<span class="material-symbols-outlined text-[10px]">pause</span> Paused

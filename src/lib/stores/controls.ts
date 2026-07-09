@@ -15,8 +15,6 @@ export interface ControlsState {
 
 export interface InstrumentStatus {
 	symbol: string;
-	displayName: string;
-	exchanges: string[];
 	isQuotingEnabled: boolean;
 	currentPrice: number | null;
 }
@@ -153,10 +151,9 @@ function createControlsStore() {
 					// Fraction [0, 1] on read → percent [0, 100] in the store/UI.
 					sizeScalar: controls.size_scalar * 100,
 					directionalSkew: controls.directional_skew,
+					// Only what the backend actually sends — no invented metadata.
 					instruments: instrumentsResp.instruments.map((i) => ({
 						symbol: i.symbol,
-						displayName: `${i.symbol} Options`,
-						exchanges: ['Exchange'],
 						isQuotingEnabled: i.quoting_enabled,
 						currentPrice: i.current_price
 					})),

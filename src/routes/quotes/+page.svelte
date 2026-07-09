@@ -39,53 +39,19 @@
 </script>
 
 <div class="p-6 flex flex-col gap-6 max-w-[1600px] mx-auto">
-	<!-- Stats Row - Empty State -->
+	<!-- Stats Row — the backend exposes none of these yet -->
 	<section class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-		<div
-			class="bg-surface-dark border border-border-dark rounded-lg p-4 flex flex-col justify-between h-28 relative overflow-hidden group"
-		>
-			<p class="text-text-muted text-sm font-medium">Delta Exposure</p>
-			<div>
-				<p class="text-text-muted text-2xl font-bold tracking-tight">--</p>
-				<p class="text-text-muted text-sm font-medium mt-1">No quotes</p>
+		{#each ['Delta Exposure', 'Gamma', 'Theta (Decay)', 'Vega', 'Daily P&L'] as metric (metric)}
+			<div
+				class="bg-surface-dark border border-border-dark rounded-lg p-4 flex flex-col justify-between h-28"
+			>
+				<p class="text-text-muted text-sm font-medium">{metric}</p>
+				<div>
+					<p class="text-text-muted text-2xl font-bold tracking-tight">—</p>
+					<p class="text-text-muted text-xs font-medium mt-1">Not provided by the backend</p>
+				</div>
 			</div>
-		</div>
-		<div
-			class="bg-surface-dark border border-border-dark rounded-lg p-4 flex flex-col justify-between h-28"
-		>
-			<p class="text-text-muted text-sm font-medium">Gamma</p>
-			<div>
-				<p class="text-text-muted text-2xl font-bold tracking-tight">--</p>
-				<p class="text-text-muted text-sm font-medium mt-1">No quotes</p>
-			</div>
-		</div>
-		<div
-			class="bg-surface-dark border border-border-dark rounded-lg p-4 flex flex-col justify-between h-28"
-		>
-			<p class="text-text-muted text-sm font-medium">Theta (Decay)</p>
-			<div>
-				<p class="text-text-muted text-2xl font-bold tracking-tight">--</p>
-				<p class="text-text-muted text-sm font-medium mt-1">No quotes</p>
-			</div>
-		</div>
-		<div
-			class="bg-surface-dark border border-border-dark rounded-lg p-4 flex flex-col justify-between h-28"
-		>
-			<p class="text-text-muted text-sm font-medium">Vega</p>
-			<div>
-				<p class="text-text-muted text-2xl font-bold tracking-tight">--</p>
-				<p class="text-text-muted text-sm font-medium mt-1">No quotes</p>
-			</div>
-		</div>
-		<div
-			class="bg-surface-dark border border-border-dark rounded-lg p-4 flex flex-col justify-between h-28 relative overflow-hidden"
-		>
-			<p class="text-text-muted text-sm font-medium">Daily P&L</p>
-			<div>
-				<p class="text-text-muted text-2xl font-bold tracking-tight">$0.00</p>
-				<p class="text-text-muted text-sm font-medium mt-1">No activity</p>
-			</div>
-		</div>
+		{/each}
 	</section>
 
 	<!-- Quote Matrix -->

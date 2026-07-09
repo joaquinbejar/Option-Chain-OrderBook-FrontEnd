@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import { systemStore } from '$lib/stores/system';
+	import { authStore } from '$lib/stores/auth';
 
 	const navItems = [
 		{ href: '/controls', icon: 'tune', label: 'Controls' },
@@ -49,9 +51,16 @@
 				MM
 			</div>
 			<div class="flex flex-col">
-				<p class="text-white text-sm font-medium">Algo Desk</p>
-				<p class="text-success text-xs flex items-center gap-1">
-					<span class="w-1.5 h-1.5 rounded-full bg-success"></span> Online
+				<p class="text-white text-sm font-medium">{$authStore.sub ?? 'Not authenticated'}</p>
+				<p
+					class="text-xs flex items-center gap-1 {$systemStore.connected
+						? 'text-success'
+						: 'text-danger'}"
+				>
+					<span
+						class="w-1.5 h-1.5 rounded-full {$systemStore.connected ? 'bg-success' : 'bg-danger'}"
+					></span>
+					{$systemStore.connected ? 'Online' : 'Offline'}
 				</p>
 			</div>
 		</div>
