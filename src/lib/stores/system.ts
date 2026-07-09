@@ -89,6 +89,9 @@ function createSystemStore() {
 				wsUnsubscribe();
 				wsUnsubscribe = null;
 			}
+			// Nothing is watching anymore — the store must not keep reporting
+			// a healthy connection or a trustworthy latency.
+			update((s) => ({ ...s, connected: false, latencyStale: true }));
 		},
 
 		setConnected: (connected: boolean) => update((s) => ({ ...s, connected })),

@@ -42,15 +42,20 @@ describe('system store — lifecycle', () => {
 		expect(fakeWs.subscribe).toHaveBeenCalledOnce();
 	});
 
-	it('disconnect() clears the interval and unsubscribes', () => {
+	it('disconnect() clears the interval, unsubscribes, and stops reporting healthy', () => {
 		systemStore.init();
+		fakeWs.emit({ type: 'heartbeat', data: { timestamp: 999_940 } });
+		fakeWs.emit({ type: 'connected', data: { message: 'hi' } });
+
 		systemStore.disconnect();
 
 		expect(vi.getTimerCount()).toBe(0);
+		expect(get(systemStore).connected).toBe(false);
+		expect(get(systemStore).latencyStale).toBe(true);
 
 		// A frame after disconnect must not mutate state.
 		fakeWs.emit({ type: 'heartbeat', data: { timestamp: 999_500 } });
-		expect(get(systemStore).lastHeartbeat).toBe(0);
+		expect(get(systemStore).latencyStale).toBe(true);
 	});
 
 	it('a heartbeat sets latency and clears staleness', () => {
