@@ -1,9 +1,10 @@
 /// <reference types="vitest/config" />
 import { sveltekit } from '@sveltejs/kit/vite';
+import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-	plugins: [sveltekit()],
+	plugins: [tailwindcss(), sveltekit()],
 	// Vitest must resolve the browser build of Svelte, or component tests hit
 	// the server entry where mount() is unavailable.
 	resolve: process.env.VITEST ? { conditions: ['browser'] } : undefined,

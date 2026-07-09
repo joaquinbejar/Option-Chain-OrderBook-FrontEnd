@@ -1,6 +1,31 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+/* Design tokens (formerly tailwind.config.js) — the single source for the
+   color system; use the token utility, never a raw hex, for these concepts. */
+@theme {
+	--color-primary: #135bec;
+	--color-background-light: #f6f6f8;
+	--color-background-dark: #101622;
+	--color-surface-dark: #1a2230;
+	--color-border-dark: #232f48;
+	--color-text-muted: #92a4c9;
+	--color-success: #0bda5e;
+	--color-danger: #fa6238;
+	--color-warning: #f59e0b;
+	--font-display: 'Manrope', sans-serif;
+}
+
+/* Tailwind v4 defaults borders/divides to currentColor; v3 used gray-200.
+   Preserve the v3 behavior so unpainted borders don't change appearance. */
+@layer base {
+	*,
+	::after,
+	::before,
+	::backdrop,
+	::file-selector-button {
+		border-color: var(--color-gray-200, currentColor);
+	}
+}
 
 /* Custom scrollbar for dark theme */
 ::-webkit-scrollbar {
