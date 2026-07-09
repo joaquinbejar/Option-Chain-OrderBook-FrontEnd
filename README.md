@@ -5,18 +5,23 @@ A modern SvelteKit-based control console for options market making operations.
 ## Screenshots
 
 ### Quote Matrix
+
 ![Quote Matrix](static/quotepro.png)
 
 ### Risk Commander
+
 ![Risk Commander](static/risk-commander.png)
 
 ### Execution Monitor
+
 ![Execution Monitor](static/execution-monitor.png)
 
 ### Option Pair Depth Monitor
+
 ![Option Pair Depth Monitor](static/option-pair-depth-monitor.png)
 
 ### Algo Trader Pro
+
 ![Algo Trader Pro](static/algo-trader-pro.png)
 
 ## Features
@@ -112,16 +117,16 @@ The Vite dev server proxies `/api` requests to `http://localhost:8080` by defaul
 
 ### Colors
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `primary` | `#135bec` | Primary actions, highlights |
-| `background-dark` | `#101622` | Main background |
-| `surface-dark` | `#1a2230` | Card backgrounds |
-| `border-dark` | `#232f48` | Borders |
-| `text-muted` | `#92a4c9` | Secondary text |
-| `success` | `#0bda5e` | Positive values |
-| `danger` | `#fa6238` | Negative values, alerts |
-| `warning` | `#f59e0b` | Warnings |
+| Token             | Value     | Usage                       |
+| ----------------- | --------- | --------------------------- |
+| `primary`         | `#135bec` | Primary actions, highlights |
+| `background-dark` | `#101622` | Main background             |
+| `surface-dark`    | `#1a2230` | Card backgrounds            |
+| `border-dark`     | `#232f48` | Borders                     |
+| `text-muted`      | `#92a4c9` | Secondary text              |
+| `success`         | `#0bda5e` | Positive values             |
+| `danger`          | `#fa6238` | Negative values, alerts     |
+| `warning`         | `#f59e0b` | Warnings                    |
 
 ## License
 

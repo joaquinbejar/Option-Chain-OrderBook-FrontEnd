@@ -11,7 +11,9 @@
 	];
 </script>
 
-<aside class="w-64 h-full flex flex-col bg-[#111722] border-r border-border-dark flex-shrink-0 z-20">
+<aside
+	class="w-64 h-full flex flex-col bg-[#111722] border-r border-border-dark flex-shrink-0 z-20"
+>
 	<div class="flex flex-col p-4 h-full justify-between">
 		<div class="flex flex-col gap-6">
 			<!-- Branding -->

@@ -18,7 +18,9 @@
 <div class="p-4 grid grid-cols-12 grid-rows-[auto_1fr] gap-4 h-full overflow-hidden">
 	<!-- KPI Cards Row - Empty State -->
 	<div class="col-span-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 h-auto">
-		<div class="flex flex-col justify-between rounded-xl p-4 border border-border-dark bg-surface-dark shadow-sm">
+		<div
+			class="flex flex-col justify-between rounded-xl p-4 border border-border-dark bg-surface-dark shadow-sm"
+		>
 			<div class="flex justify-between items-start mb-2">
 				<p class="text-text-muted text-xs font-bold uppercase tracking-wider">Margin Utilization</p>
 				<span class="material-symbols-outlined text-text-muted text-sm">pie_chart</span>
@@ -30,19 +32,29 @@
 				</div>
 			</div>
 		</div>
-		<div class="flex flex-col justify-between rounded-xl p-4 border border-border-dark bg-surface-dark shadow-sm">
+		<div
+			class="flex flex-col justify-between rounded-xl p-4 border border-border-dark bg-surface-dark shadow-sm"
+		>
 			<div class="flex justify-between items-start mb-2">
-				<p class="text-text-muted text-xs font-bold uppercase tracking-wider">Net Portfolio Delta</p>
+				<p class="text-text-muted text-xs font-bold uppercase tracking-wider">
+					Net Portfolio Delta
+				</p>
 				<span class="material-symbols-outlined text-text-muted text-sm">balance</span>
 			</div>
 			<div class="flex items-end justify-between">
 				<p class="text-text-muted text-2xl font-bold tabular-nums">0.00</p>
-				<span class="text-xs font-medium text-text-muted bg-slate-700/50 px-1.5 py-0.5 rounded">No positions</span>
+				<span class="text-xs font-medium text-text-muted bg-slate-700/50 px-1.5 py-0.5 rounded"
+					>No positions</span
+				>
 			</div>
 		</div>
-		<div class="flex flex-col justify-between rounded-xl p-4 border border-border-dark bg-surface-dark shadow-sm">
+		<div
+			class="flex flex-col justify-between rounded-xl p-4 border border-border-dark bg-surface-dark shadow-sm"
+		>
 			<div class="flex justify-between items-start mb-2">
-				<p class="text-text-muted text-xs font-bold uppercase tracking-wider">Total Vega Exposure</p>
+				<p class="text-text-muted text-xs font-bold uppercase tracking-wider">
+					Total Vega Exposure
+				</p>
 				<span class="material-symbols-outlined text-text-muted text-sm">show_chart</span>
 			</div>
 			<div class="flex items-end justify-between">
@@ -50,9 +62,13 @@
 				<span class="text-xs text-text-muted">No exposure</span>
 			</div>
 		</div>
-		<div class="flex flex-col justify-between rounded-xl p-4 border border-border-dark bg-surface-dark shadow-sm relative overflow-hidden">
+		<div
+			class="flex flex-col justify-between rounded-xl p-4 border border-border-dark bg-surface-dark shadow-sm relative overflow-hidden"
+		>
 			<div class="flex justify-between items-start mb-2 relative z-10">
-				<p class="text-text-muted text-xs font-bold uppercase tracking-wider">Active Limits Breached</p>
+				<p class="text-text-muted text-xs font-bold uppercase tracking-wider">
+					Active Limits Breached
+				</p>
 				<span class="h-2 w-2 rounded-full bg-success"></span>
 			</div>
 			<div class="flex items-end justify-between relative z-10">
@@ -63,22 +79,35 @@
 	</div>
 
 	<!-- Inventory Table -->
-	<div class="col-span-12 lg:col-span-8 flex flex-col min-h-0 bg-surface-dark rounded-xl border border-border-dark shadow-sm">
+	<div
+		class="col-span-12 lg:col-span-8 flex flex-col min-h-0 bg-surface-dark rounded-xl border border-border-dark shadow-sm"
+	>
 		<div class="flex items-center justify-between p-4 border-b border-border-dark">
 			<div class="flex items-center gap-2">
 				<h3 class="text-white font-bold text-lg">Inventory & Risk Matrix</h3>
-				<span class="px-2 py-0.5 rounded-full bg-slate-700 text-xs text-slate-300 font-medium">Live</span>
+				<span class="px-2 py-0.5 rounded-full bg-slate-700 text-xs text-slate-300 font-medium"
+					>Live</span
+				>
 			</div>
 			<div class="flex gap-2">
 				<div class="relative">
-					<span class="absolute left-2.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-text-muted text-[18px]">search</span>
-					<input class="h-8 pl-9 pr-3 rounded bg-background-dark border border-border-dark text-xs w-40 text-white focus:outline-none focus:border-primary" placeholder="Filter ticker..." type="text" />
+					<span
+						class="absolute left-2.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-text-muted text-[18px]"
+						>search</span
+					>
+					<input
+						class="h-8 pl-9 pr-3 rounded bg-background-dark border border-border-dark text-xs w-40 text-white focus:outline-none focus:border-primary"
+						placeholder="Filter ticker..."
+						type="text"
+					/>
 				</div>
 			</div>
 		</div>
 		<div class="flex-1 overflow-auto">
 			<table class="w-full text-left border-collapse">
-				<thead class="sticky top-0 z-10 bg-[#151c2a] text-xs uppercase text-text-muted font-semibold tracking-wider">
+				<thead
+					class="sticky top-0 z-10 bg-[#151c2a] text-xs uppercase text-text-muted font-semibold tracking-wider"
+				>
 					<tr>
 						<th class="px-4 py-3 border-b border-border-dark">Underlying</th>
 						<th class="px-4 py-3 border-b border-border-dark text-right">Net Qty</th>
@@ -92,20 +121,52 @@
 				</thead>
 				<tbody class="text-sm font-medium divide-y divide-border-dark text-slate-300">
 					{#each positions as pos (pos.symbol)}
-						<tr class="hover:bg-white/5 transition-colors group {pos.delta < -100 ? 'border-l-2 border-l-danger bg-danger/5' : pos.delta < 0 ? 'border-l-2 border-l-warning' : ''}">
+						<tr
+							class="hover:bg-white/5 transition-colors group {pos.delta < -100
+								? 'border-l-2 border-l-danger bg-danger/5'
+								: pos.delta < 0
+									? 'border-l-2 border-l-warning'
+									: ''}"
+						>
 							<td class="px-4 py-3">
 								<div class="flex flex-col">
 									<span class="text-white font-bold">{pos.symbol}</span>
 									<span class="text-[10px] text-text-muted">{pos.name}</span>
 								</div>
 							</td>
-							<td class="px-4 py-3 text-right tabular-nums {pos.qty < 0 ? 'text-danger' : 'text-success'}">{pos.qty.toLocaleString()}</td>
+							<td
+								class="px-4 py-3 text-right tabular-nums {pos.qty < 0
+									? 'text-danger'
+									: 'text-success'}">{pos.qty.toLocaleString()}</td
+							>
 							<td class="px-4 py-3 text-right tabular-nums">{pos.markPrice.toFixed(2)}</td>
-							<td class="px-4 py-3 text-right tabular-nums font-bold {pos.delta > 0 ? 'text-success bg-success/5' : pos.delta < 0 ? 'text-danger bg-danger/5' : 'text-text-muted'}">{pos.delta > 0 ? '+' : ''}{pos.delta.toFixed(1)}</td>
-							<td class="px-4 py-3 text-right tabular-nums {pos.gamma > 0 ? 'text-success' : 'text-danger'}">{pos.gamma > 0 ? '+' : ''}{pos.gamma.toFixed(1)}</td>
-							<td class="px-4 py-3 text-right tabular-nums {pos.vega > 0 ? 'text-success' : 'text-danger'}">{pos.vega.toFixed(1)}</td>
-							<td class="px-4 py-3 text-right tabular-nums {pos.theta > 0 ? 'text-success' : 'text-danger'}">{pos.theta > 0 ? '+' : ''}{pos.theta.toFixed(1)}</td>
-							<td class="px-4 py-3 text-right tabular-nums font-bold {pos.pnl > 0 ? 'text-success' : 'text-danger'}">{pos.pnl > 0 ? '+' : ''}${pos.pnl.toLocaleString()}</td>
+							<td
+								class="px-4 py-3 text-right tabular-nums font-bold {pos.delta > 0
+									? 'text-success bg-success/5'
+									: pos.delta < 0
+										? 'text-danger bg-danger/5'
+										: 'text-text-muted'}">{pos.delta > 0 ? '+' : ''}{pos.delta.toFixed(1)}</td
+							>
+							<td
+								class="px-4 py-3 text-right tabular-nums {pos.gamma > 0
+									? 'text-success'
+									: 'text-danger'}">{pos.gamma > 0 ? '+' : ''}{pos.gamma.toFixed(1)}</td
+							>
+							<td
+								class="px-4 py-3 text-right tabular-nums {pos.vega > 0
+									? 'text-success'
+									: 'text-danger'}">{pos.vega.toFixed(1)}</td
+							>
+							<td
+								class="px-4 py-3 text-right tabular-nums {pos.theta > 0
+									? 'text-success'
+									: 'text-danger'}">{pos.theta > 0 ? '+' : ''}{pos.theta.toFixed(1)}</td
+							>
+							<td
+								class="px-4 py-3 text-right tabular-nums font-bold {pos.pnl > 0
+									? 'text-success'
+									: 'text-danger'}">{pos.pnl > 0 ? '+' : ''}${pos.pnl.toLocaleString()}</td
+							>
 						</tr>
 					{/each}
 				</tbody>
@@ -121,7 +182,9 @@
 				<h3 class="text-white font-bold">Delta Hedging</h3>
 				<div class="flex items-center gap-1.5">
 					<span class="h-2 w-2 rounded-full bg-success animate-pulse"></span>
-					<span class="text-xs text-text-muted uppercase font-bold tracking-wider">Auto-Hedge On</span>
+					<span class="text-xs text-text-muted uppercase font-bold tracking-wider"
+						>Auto-Hedge On</span
+					>
 				</div>
 			</div>
 			<div class="bg-background-dark rounded-lg p-4 mb-4 border border-border-dark">
@@ -141,7 +204,9 @@
 					<span>Working...</span>
 				</div>
 			</div>
-			<button class="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-border-dark hover:bg-slate-600 text-white text-sm font-bold transition-colors">
+			<button
+				class="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-border-dark hover:bg-slate-600 text-white text-sm font-bold transition-colors"
+			>
 				<span class="material-symbols-outlined text-[18px]">tune</span>
 				Adjust Hedge Parameters
 			</button>
@@ -155,19 +220,27 @@
 			</div>
 			<div class="flex h-32 gap-3 items-end justify-between px-2">
 				<div class="flex flex-col items-center gap-1 w-full">
-					<div class="w-full bg-success/80 rounded-t h-[80%] hover:bg-success transition-colors"></div>
+					<div
+						class="w-full bg-success/80 rounded-t h-[80%] hover:bg-success transition-colors"
+					></div>
 					<span class="text-[10px] text-text-muted font-medium">Theta</span>
 				</div>
 				<div class="flex flex-col items-center gap-1 w-full">
-					<div class="w-full bg-danger/80 rounded-t h-[30%] hover:bg-danger transition-colors"></div>
+					<div
+						class="w-full bg-danger/80 rounded-t h-[30%] hover:bg-danger transition-colors"
+					></div>
 					<span class="text-[10px] text-text-muted font-medium">Delta</span>
 				</div>
 				<div class="flex flex-col items-center gap-1 w-full">
-					<div class="w-full bg-success/80 rounded-t h-[45%] hover:bg-success transition-colors"></div>
+					<div
+						class="w-full bg-success/80 rounded-t h-[45%] hover:bg-success transition-colors"
+					></div>
 					<span class="text-[10px] text-text-muted font-medium">Vega</span>
 				</div>
 				<div class="flex flex-col items-center gap-1 w-full">
-					<div class="w-full bg-primary/80 rounded-t h-[60%] hover:bg-primary transition-colors"></div>
+					<div
+						class="w-full bg-primary/80 rounded-t h-[60%] hover:bg-primary transition-colors"
+					></div>
 					<span class="text-[10px] text-text-muted font-medium">Edge</span>
 				</div>
 			</div>

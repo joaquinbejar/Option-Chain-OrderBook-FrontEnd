@@ -100,9 +100,7 @@
 				? 'border-success/30'
 				: 'border-danger/30'} rounded-xl p-6 flex flex-col justify-between relative overflow-hidden group"
 		>
-			<div
-				class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"
-			>
+			<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
 				<span
 					class="material-symbols-outlined {$controlsStore.masterSwitch
 						? 'text-success'
@@ -154,10 +152,17 @@
 					</div>
 					<div>
 						<span class="text-2xl font-bold text-white block font-mono">
-							${priceData.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+							${priceData.price.toLocaleString('en-US', {
+								minimumFractionDigits: 2,
+								maximumFractionDigits: 2
+							})}
 						</span>
 						{#if priceData.change !== 0}
-							<span class="text-xs {priceData.change >= 0 ? 'text-success' : 'text-danger'} flex items-center gap-1 mt-1">
+							<span
+								class="text-xs {priceData.change >= 0
+									? 'text-success'
+									: 'text-danger'} flex items-center gap-1 mt-1"
+							>
 								<span class="material-symbols-outlined text-xs">
 									{priceData.change >= 0 ? 'trending_up' : 'trending_down'}
 								</span>
@@ -169,7 +174,9 @@
 					</div>
 				</div>
 			{:else}
-				<div class="bg-surface-dark border border-border-dark rounded-xl p-4 flex flex-col gap-3 col-span-full">
+				<div
+					class="bg-surface-dark border border-border-dark rounded-xl p-4 flex flex-col gap-3 col-span-full"
+				>
 					<div class="flex items-center justify-center text-text-muted py-4">
 						<span class="material-symbols-outlined animate-spin mr-2">sync</span>
 						<span class="text-sm">Loading prices from backend...</span>
@@ -273,7 +280,8 @@
 							oninput={handleSkewChange}
 							class="w-full accent-primary h-2 bg-border-dark rounded-lg appearance-none cursor-pointer z-10 relative"
 						/>
-						<div class="absolute top-0 left-1/2 -translate-x-1/2 w-0.5 h-full bg-slate-600 z-0"
+						<div
+							class="absolute top-0 left-1/2 -translate-x-1/2 w-0.5 h-full bg-slate-600 z-0"
 						></div>
 					</div>
 					<div class="flex justify-between mt-2 text-xs text-text-muted">
@@ -304,7 +312,9 @@
 		<!-- Right Column: Instrument Controls -->
 		<div class="lg:col-span-4 flex flex-col gap-6">
 			<h3 class="text-white text-xl font-bold">Instrument Controls</h3>
-			<div class="bg-surface-dark border border-border-dark rounded-xl overflow-hidden flex flex-col">
+			<div
+				class="bg-surface-dark border border-border-dark rounded-xl overflow-hidden flex flex-col"
+			>
 				<div class="p-4 border-b border-border-dark bg-background-dark/30">
 					<span class="text-xs font-bold uppercase text-slate-400 tracking-wider"
 						>Per-Asset Quoting Status</span
