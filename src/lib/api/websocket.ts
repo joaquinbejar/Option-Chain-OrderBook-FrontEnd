@@ -4,14 +4,18 @@
 
 export type WsMessageType = 'quote' | 'fill' | 'config' | 'price' | 'connected' | 'heartbeat';
 
+/** All price fields on WS frames are INTEGER CENTS (see `client.ts` contract). */
 export interface WsQuoteMessage {
 	type: 'quote';
 	data: {
 		symbol: string;
 		expiration: string;
+		/** Strike in cents. */
 		strike: number;
 		style: string;
+		/** Bid price in cents. */
 		bid_price: number;
+		/** Ask price in cents. */
 		ask_price: number;
 		bid_size: number;
 		ask_size: number;
@@ -26,7 +30,9 @@ export interface WsFillMessage {
 		instrument: string;
 		side: string;
 		quantity: number;
+		/** Fill price in cents. */
 		price: number;
+		/** Edge captured in cents. */
 		edge: number;
 	};
 }
@@ -36,6 +42,7 @@ export interface WsConfigMessage {
 	data: {
 		enabled: boolean;
 		spread_multiplier: number;
+		/** FRACTION in [0, 1] — same scale as GET /controls, not a percent. */
 		size_scalar: number;
 		directional_skew: number;
 	};
@@ -45,6 +52,7 @@ export interface WsPriceMessage {
 	type: 'price';
 	data: {
 		symbol: string;
+		/** Underlying price in cents. */
 		price_cents: number;
 	};
 }

@@ -185,6 +185,25 @@ describe('controls store — parameters', () => {
 		expect(get(controlsStore).spreadMultiplier).toBe(2);
 		expect(api.updateParameters).toHaveBeenCalledWith({ spreadMultiplier: 2 });
 	});
+
+	it('size_scalar round-trips: fraction on read, percent on write', async () => {
+		// GET /controls returned 0.8 (fraction) — the store holds 80 (percent).
+		await initStore();
+		expect(get(controlsStore).sizeScalar).toBeCloseTo(80);
+
+		vi.mocked(api.updateParameters).mockResolvedValue({
+			success: true,
+			spread_multiplier: 1.5,
+			size_scalar: 60,
+			directional_skew: 0.1
+		});
+
+		// The write API expects percent [0, 100] — the store must not re-scale.
+		await controlsStore.setSizeScalar(60);
+
+		expect(api.updateParameters).toHaveBeenCalledWith({ sizeScalar: 60 });
+		expect(get(controlsStore).sizeScalar).toBe(60);
+	});
 });
 
 describe('controls store — instruments', () => {

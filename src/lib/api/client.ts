@@ -1,7 +1,21 @@
+/**
+ * Wire-unit contract (source of truth: the Option-Chain-OrderBook backend).
+ *
+ * - Option/order prices travel as INTEGER CENTS everywhere: `QuoteResponse`
+ *   bid/ask, the WS `quote` / `price` / `fill` frames, and `addOrder`'s
+ *   `price`. Convert cents → dollars exactly once, at the store boundary —
+ *   never in components.
+ * - The `/prices` endpoints are the exception: underlying prices are DOLLARS
+ *   (floats) on GET and on the POST request; only the POST response echoes
+ *   `price_cents`.
+ * - `size_scalar` is asymmetric on the backend: GET `/controls` (and the WS
+ *   `config` frame) return a FRACTION in [0, 1], while POST
+ *   `/controls/parameters` expects a PERCENT in [0, 100].
+ */
 const API_BASE = '/api/v1';
 
-async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
-	const response = await fetch(`${API_BASE}${endpoint}`, {
+async function fetchApi<T>(endpoint: string, options?: RequestInit, base = API_BASE): Promise<T> {
+	const response = await fetch(`${base}${endpoint}`, {
 		headers: {
 			'Content-Type': 'application/json',
 			...options?.headers
@@ -18,8 +32,8 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
 }
 
 export const api = {
-	// Health
-	health: () => fetchApi<{ status: string; version: string }>('/health'),
+	// Health — the backend registers /health unprefixed, NOT under /api/v1.
+	health: () => fetchApi<{ status: string; version: string }>('/health', undefined, ''),
 
 	// Stats
 	getStats: () =>
@@ -86,6 +100,7 @@ export const api = {
 		expiration: string,
 		strike: number,
 		style: 'call' | 'put',
+		/** `price` is INTEGER CENTS (backend `AddOrderRequest.price: u128`). */
 		order: { side: string; price: number; quantity: number }
 	) =>
 		fetchApi<{ order_id: string; message: string }>(
@@ -115,6 +130,7 @@ export const api = {
 		fetchApi<{
 			master_enabled: boolean;
 			spread_multiplier: number;
+			/** FRACTION in [0, 1] on read — the write side takes a percent. */
 			size_scalar: number;
 			directional_skew: number;
 		}>('/controls'),
@@ -131,6 +147,7 @@ export const api = {
 		}),
 	updateParameters: (params: {
 		spreadMultiplier?: number;
+		/** PERCENT in [0, 100] on write — the backend divides by 100. */
 		sizeScalar?: number;
 		directionalSkew?: number;
 	}) =>
@@ -159,9 +176,10 @@ export const api = {
 			}
 		),
 
-	// Prices
+	// Prices — underlying prices are DOLLARS (floats) on this surface.
 	insertPrice: (data: {
 		symbol: string;
+		/** DOLLARS — the backend converts to cents internally. */
 		price: number;
 		bid?: number;
 		ask?: number;
@@ -178,6 +196,7 @@ export const api = {
 	getLatestPrice: (symbol: string) =>
 		fetchApi<{
 			symbol: string;
+			/** DOLLARS (float), as are `bid` / `ask`. */
 			price: number;
 			bid: number | null;
 			ask: number | null;
@@ -188,6 +207,7 @@ export const api = {
 		fetchApi<
 			Array<{
 				symbol: string;
+				/** DOLLARS (float), as are `bid` / `ask`. */
 				price: number;
 				bid: number | null;
 				ask: number | null;
@@ -197,6 +217,11 @@ export const api = {
 		>('/prices')
 };
 
+/**
+ * Top-of-book quote as the backend serializes it.
+ * `bid_price` / `ask_price` are INTEGER CENTS (`null` = that side is empty);
+ * sizes are contract quantities. Convert to dollars once, in a store.
+ */
 export interface QuoteResponse {
 	bid_price: number | null;
 	bid_size: number;
