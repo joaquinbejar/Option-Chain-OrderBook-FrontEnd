@@ -1,0 +1,190 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { get } from 'svelte/store';
+
+vi.mock('$lib/api/websocket', async (importOriginal) => {
+	const real = await importOriginal<typeof import('$lib/api/websocket')>();
+	const { makeFakeWsClient } = await import('$lib/__tests__/mocks');
+	const fake = makeFakeWsClient();
+	return { ...real, getWebSocketClient: () => fake };
+});
+
+vi.mock('$lib/api/client', () => ({
+	api: {
+		getControls: vi.fn(),
+		listInstruments: vi.fn(),
+		killSwitch: vi.fn(),
+		enableQuoting: vi.fn(),
+		updateParameters: vi.fn(),
+		toggleInstrument: vi.fn()
+	}
+}));
+
+import { controlsStore } from './controls';
+import { getWebSocketClient } from '$lib/api/websocket';
+import { api } from '$lib/api/client';
+import type { FakeWsClient } from '$lib/__tests__/mocks';
+
+const fakeWs = getWebSocketClient() as unknown as FakeWsClient;
+
+async function initStore() {
+	vi.mocked(api.getControls).mockResolvedValue({
+		master_enabled: true,
+		spread_multiplier: 1.5,
+		size_scalar: 0.8,
+		directional_skew: 0.1
+	});
+	vi.mocked(api.listInstruments).mockResolvedValue({
+		instruments: [
+			{ symbol: 'BTC', quoting_enabled: true, current_price: 50_000 },
+			{ symbol: 'ETH', quoting_enabled: false, current_price: null }
+		]
+	});
+	await controlsStore.init();
+}
+
+beforeEach(() => {
+	controlsStore.reset();
+	vi.clearAllMocks();
+});
+
+describe('controls store — init', () => {
+	it('reflects backend controls and instruments', async () => {
+		await initStore();
+
+		const s = get(controlsStore);
+		expect(s.masterSwitch).toBe(true);
+		expect(s.spreadMultiplier).toBe(1.5);
+		expect(s.sizeScalar).toBeCloseTo(80); // size_scalar × 100
+		expect(s.directionalSkew).toBe(0.1);
+		expect(s.instruments).toHaveLength(2);
+		expect(s.instruments[0]).toMatchObject({
+			symbol: 'BTC',
+			isQuotingEnabled: true,
+			currentPrice: 50_000
+		});
+		expect(s.instruments[1].currentPrice).toBeNull();
+		expect(s.loading).toBe(false);
+		expect(fakeWs.connect).toHaveBeenCalled();
+	});
+
+	it('a failed init clears loading without corrupting defaults', async () => {
+		vi.mocked(api.getControls).mockRejectedValue(new Error('backend down'));
+		vi.mocked(api.listInstruments).mockRejectedValue(new Error('backend down'));
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+
+		await controlsStore.init();
+
+		const s = get(controlsStore);
+		expect(s.loading).toBe(false);
+		expect(s.masterSwitch).toBe(true);
+		expect(s.instruments).toEqual([]);
+	});
+});
+
+describe('controls store — master switch', () => {
+	it('fires the kill switch when enabled and reflects the API result', async () => {
+		await initStore();
+		vi.mocked(api.killSwitch).mockResolvedValue({
+			success: true,
+			message: 'killed',
+			master_enabled: false
+		});
+
+		await controlsStore.toggleMasterSwitch();
+
+		expect(api.killSwitch).toHaveBeenCalledOnce();
+		expect(api.enableQuoting).not.toHaveBeenCalled();
+		expect(get(controlsStore).masterSwitch).toBe(false);
+	});
+
+	it('re-enables quoting when disabled and reflects the API result', async () => {
+		await initStore();
+		vi.mocked(api.killSwitch).mockResolvedValue({
+			success: true,
+			message: 'killed',
+			master_enabled: false
+		});
+		await controlsStore.toggleMasterSwitch();
+
+		vi.mocked(api.enableQuoting).mockResolvedValue({
+			success: true,
+			message: 'enabled',
+			master_enabled: true
+		});
+		await controlsStore.toggleMasterSwitch();
+
+		expect(api.enableQuoting).toHaveBeenCalledOnce();
+		expect(get(controlsStore).masterSwitch).toBe(true);
+	});
+
+	it('keeps the current state when the API call fails — the UI must not lie', async () => {
+		await initStore();
+		vi.mocked(api.killSwitch).mockRejectedValue(new Error('backend down'));
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+
+		await controlsStore.toggleMasterSwitch();
+
+		expect(get(controlsStore).masterSwitch).toBe(true);
+	});
+});
+
+describe('controls store — parameters', () => {
+	it('setSpreadMultiplier updates optimistically and calls the API', async () => {
+		await initStore();
+		vi.mocked(api.updateParameters).mockResolvedValue({
+			success: true,
+			spread_multiplier: 2,
+			size_scalar: 0.8,
+			directional_skew: 0.1
+		});
+
+		await controlsStore.setSpreadMultiplier(2);
+
+		expect(get(controlsStore).spreadMultiplier).toBe(2);
+		expect(api.updateParameters).toHaveBeenCalledWith({ spreadMultiplier: 2 });
+	});
+});
+
+describe('controls store — instruments', () => {
+	it('toggleInstrument flips only the targeted instrument from the API result', async () => {
+		await initStore();
+		vi.mocked(api.toggleInstrument).mockResolvedValue({
+			success: true,
+			symbol: 'BTC',
+			enabled: false
+		});
+
+		await controlsStore.toggleInstrument('BTC');
+
+		const s = get(controlsStore);
+		expect(s.instruments.find((i) => i.symbol === 'BTC')?.isQuotingEnabled).toBe(false);
+		expect(s.instruments.find((i) => i.symbol === 'ETH')?.isQuotingEnabled).toBe(false); // untouched
+	});
+});
+
+describe('controls store — WebSocket frames', () => {
+	it('a config frame updates the quoting parameters', async () => {
+		await initStore();
+
+		fakeWs.emit({
+			type: 'config',
+			data: { enabled: false, spread_multiplier: 3, size_scalar: 0.5, directional_skew: -0.2 }
+		});
+
+		const s = get(controlsStore);
+		expect(s.masterSwitch).toBe(false);
+		expect(s.spreadMultiplier).toBe(3);
+		expect(s.sizeScalar).toBeCloseTo(50);
+		expect(s.directionalSkew).toBe(-0.2);
+	});
+
+	it('a price frame converts cents to dollars for the matching instrument only', async () => {
+		await initStore();
+
+		fakeWs.emit({ type: 'price', data: { symbol: 'BTC', price_cents: 5_100_000 } });
+
+		const s = get(controlsStore);
+		expect(s.instruments.find((i) => i.symbol === 'BTC')?.currentPrice).toBe(51_000);
+		expect(s.instruments.find((i) => i.symbol === 'ETH')?.currentPrice).toBeNull();
+	});
+});

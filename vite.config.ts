@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 
@@ -15,5 +16,11 @@ export default defineConfig({
 				ws: true
 			}
 		}
+	},
+	test: {
+		environment: 'jsdom',
+		globals: true,
+		setupFiles: ['./vitest-setup.ts'],
+		include: ['src/**/*.{test,spec}.{ts,js}']
 	}
 });
