@@ -20,6 +20,10 @@ export interface InstrumentStatus {
 }
 
 function createControlsStore() {
+	// Guards the halt/resume round-trip: a second click while the first
+	// request is in flight must not fire a second (possibly opposite) command.
+	let switchPending = false;
+
 	const { subscribe, set, update } = writable<ControlsState>({
 		masterSwitch: true,
 		spreadMultiplier: 1.0,
@@ -86,23 +90,35 @@ function createControlsStore() {
 				update((s) => ({ ...s, loading: false }));
 			}
 		},
-		toggleMasterSwitch: async () => {
-			let currentState = false;
-			update((s) => {
-				currentState = s.masterSwitch;
-				return s;
-			});
-
+		/**
+		 * Fire the kill switch — always halts, regardless of the state the UI
+		 * believed at click time. The destructive intent is captured explicitly
+		 * so a concurrent config update cannot invert it into an enable.
+		 */
+		halt: async () => {
+			if (switchPending) return;
+			switchPending = true;
 			try {
-				if (currentState) {
-					const result = await api.killSwitch();
-					update((s) => ({ ...s, masterSwitch: result.master_enabled }));
-				} else {
-					const result = await api.enableQuoting();
-					update((s) => ({ ...s, masterSwitch: result.master_enabled }));
-				}
+				const result = await api.killSwitch();
+				update((s) => ({ ...s, masterSwitch: result.master_enabled }));
 			} catch (e) {
-				console.error('Failed to toggle master switch:', e);
+				console.error('Failed to fire the kill switch:', e);
+			} finally {
+				switchPending = false;
+			}
+		},
+
+		/** Re-enable quoting — always enables, never halts. */
+		resume: async () => {
+			if (switchPending) return;
+			switchPending = true;
+			try {
+				const result = await api.enableQuoting();
+				update((s) => ({ ...s, masterSwitch: result.master_enabled }));
+			} catch (e) {
+				console.error('Failed to re-enable quoting:', e);
+			} finally {
+				switchPending = false;
 			}
 		},
 		setSpreadMultiplier: async (value: number) => {

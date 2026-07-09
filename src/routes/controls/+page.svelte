@@ -3,10 +3,35 @@
 	import { controlsStore } from '$lib/stores/controls';
 	import { systemStore } from '$lib/stores/system';
 	import { marketStore, priceList } from '$lib/stores/market';
+	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 
 	let spreadValue = $state(1.0);
 	let sizeValue = $state(100);
 	let skewValue = $state(0);
+	let showHaltConfirm = $state(false);
+
+	function handleMasterToggle() {
+		if ($controlsStore.masterSwitch) {
+			// Halting is destructive (cancels all open orders) — confirm first.
+			showHaltConfirm = true;
+		} else {
+			// Resuming quoting stays frictionless.
+			controlsStore.resume();
+		}
+	}
+
+	function confirmHalt() {
+		showHaltConfirm = false;
+		controlsStore.halt();
+	}
+
+	// If quoting halts while the dialog is open (another client, a backend
+	// risk kill), the question is stale — dismiss it.
+	$effect(() => {
+		if (!$controlsStore.masterSwitch) {
+			showHaltConfirm = false;
+		}
+	});
 
 	onMount(() => {
 		marketStore.init();
@@ -132,7 +157,7 @@
 				</span>
 				<button
 					aria-label="Toggle master quoting switch"
-					onclick={() => controlsStore.toggleMasterSwitch()}
+					onclick={handleMasterToggle}
 					class="relative flex h-[31px] w-[51px] cursor-pointer items-center rounded-full p-0.5 transition-colors duration-200 {$controlsStore.masterSwitch
 						? 'justify-end bg-success'
 						: 'justify-start bg-[#232f48]'}"
@@ -193,9 +218,11 @@
 			<div class="flex items-center justify-between">
 				<h3 class="text-white text-xl font-bold">Global Parameter Adjustments</h3>
 				<button
-					class="text-sm text-primary hover:text-primary/80 font-medium flex items-center gap-1"
+					disabled
+					class="text-sm text-primary font-medium flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
 				>
 					<span class="material-symbols-outlined text-sm">history</span> Reset Defaults
+					<span class="text-xs text-text-muted font-normal">(not wired)</span>
 				</button>
 			</div>
 
@@ -292,19 +319,23 @@
 				</div>
 			</div>
 
-			<!-- Quick Actions -->
+			<!-- Quick Actions — placeholders until the backend exposes endpoints -->
 			<div class="flex flex-wrap gap-4 mt-2">
 				<button
-					class="flex-1 bg-surface-dark hover:bg-border-dark text-white border border-border-dark font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2"
+					disabled
+					class="flex-1 bg-surface-dark text-white border border-border-dark font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
 				>
 					<span class="material-symbols-outlined text-sm">replay</span>
 					Recalibrate Vol Surface
+					<span class="text-xs text-text-muted font-normal">(not wired)</span>
 				</button>
 				<button
-					class="flex-1 bg-surface-dark hover:bg-border-dark text-white border border-border-dark font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2"
+					disabled
+					class="flex-1 bg-surface-dark text-white border border-border-dark font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
 				>
 					<span class="material-symbols-outlined text-sm">cancel_presentation</span>
 					Cancel All Limit Orders
+					<span class="text-xs text-text-muted font-normal">(not wired — #17)</span>
 				</button>
 			</div>
 		</div>
@@ -358,3 +389,12 @@
 		</div>
 	</div>
 </div>
+
+<ConfirmDialog
+	open={showHaltConfirm}
+	title="Halt all quoting?"
+	message="This fires the kill switch: every open order is cancelled immediately and no new quotes are sent until quoting is re-enabled."
+	confirmLabel="Halt quoting"
+	onconfirm={confirmHalt}
+	oncancel={() => (showHaltConfirm = false)}
+/>
