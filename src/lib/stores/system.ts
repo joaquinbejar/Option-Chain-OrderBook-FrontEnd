@@ -9,7 +9,6 @@ export interface SystemState {
 	 * latency number is no longer trustworthy and must not render as healthy.
 	 */
 	latencyStale: boolean;
-	engineLoad: number;
 	lastHeartbeat: number;
 }
 
@@ -24,7 +23,6 @@ function createInitialState(): SystemState {
 		// Stale until the first heartbeat proves otherwise — never show a
 		// healthy-looking 0ms before any data arrived.
 		latencyStale: true,
-		engineLoad: 0,
 		lastHeartbeat: 0
 	};
 }
@@ -96,7 +94,6 @@ function createSystemStore() {
 
 		setConnected: (connected: boolean) => update((s) => ({ ...s, connected })),
 		setLatency: (latency: number) => update((s) => ({ ...s, latency })),
-		setEngineLoad: (engineLoad: number) => update((s) => ({ ...s, engineLoad })),
 		reset: () => set(createInitialState())
 	};
 }
