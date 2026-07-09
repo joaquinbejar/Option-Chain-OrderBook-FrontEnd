@@ -11,7 +11,7 @@ Re-add fresh captures against a live backend once the honest pages settle.
 ## Features
 
 - **Operational Controls** (`/controls`) - Master quoting switch (confirm-guarded, admin-only), global parameters with optimistic-update reconcile, instrument toggles, live underlying prices
-- **Quote Matrix** (`/quotes`) - Underlying/expiration selection over a matrix shell; live quote rows are not wired yet (tracked in [#29](https://github.com/joaquinbejar/Option-Chain-OrderBook-FrontEnd/issues/29)) and the page shows an honest empty state
+- **Quote Matrix** (`/quotes`) - Live call/put quotes aligned by strike, streamed over the WebSocket; empty book sides render `—`
 - **Order Book Depth** (`/depth`) - Call/Put pair order book depth from point-in-time backend snapshots (per-option Greeks and IV are not yet provided by the backend and render as `—`)
 - **Risk Commander** (`/risk`) - Layout for portfolio Greeks / inventory / hedging; the backend does not expose positions or hedging yet, so every widget shows an honest placeholder
 - **Execution Monitor** (`/executions`) - Live session fills streamed over the WebSocket `fill` frames (empty until the engine trades; no fills history endpoint yet)
@@ -124,7 +124,6 @@ Every route except `/health` and `POST /auth/token` requires a JWT. The console 
 
 Honesty over polish — these are the known gaps, in the UI and in this document:
 
-- **Quote Matrix rows** — the WS `quote` feed reaches `marketStore`, but `/quotes` doesn't render it yet ([#29](https://github.com/joaquinbejar/Option-Chain-OrderBook-FrontEnd/issues/29)).
 - **Cancel All Limit Orders / Recalibrate Vol Surface / Reset Defaults** on `/controls` are disabled placeholders — no backend endpoints exist ([#17](https://github.com/joaquinbejar/Option-Chain-OrderBook-FrontEnd/issues/17) tracks cancel-all).
 - **Per-option Greeks, IV, portfolio positions, hedging status, and P&L** are not exposed by the backend; `/depth`, `/risk`, and `/pnl` render `—` placeholders instead of inventing numbers.
 - **`/depth` is point-in-time** — snapshots with timestamps and a Refresh action, not a streaming ladder (the WS `quote` frame carries only top-of-book).
