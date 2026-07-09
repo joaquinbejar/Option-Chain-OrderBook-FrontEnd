@@ -96,7 +96,7 @@ function createInitialState(): DepthState {
 }
 
 function createDepthStore() {
-	const { subscribe, set, update } = writable<DepthState>(createInitialState());
+	const { subscribe, set } = writable<DepthState>(createInitialState());
 
 	// Drop a slow response that lands after a newer selection was loaded.
 	let generation = 0;
