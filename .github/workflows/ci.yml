@@ -38,5 +38,8 @@ jobs:
       - name: Format check (Prettier)
         run: npx prettier --check .
 
+      - name: Test (Vitest)
+        run: npm run test
+
       - name: Build (vite build)
         run: npm run build

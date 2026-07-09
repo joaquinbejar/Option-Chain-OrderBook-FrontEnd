@@ -40,20 +40,23 @@ export interface MarketState {
 	lastUpdate: number;
 }
 
-// Initial state
-const initialState: MarketState = {
-	prices: new Map(),
-	quotes: new Map(),
-	underlyings: [],
-	expirations: new Map(),
-	strikes: new Map(),
-	connected: false,
-	lastUpdate: 0
-};
+// Initial state — a factory, so reset() cannot hand back Maps that were
+// mutated in place by earlier updates.
+function createInitialState(): MarketState {
+	return {
+		prices: new Map(),
+		quotes: new Map(),
+		underlyings: [],
+		expirations: new Map(),
+		strikes: new Map(),
+		connected: false,
+		lastUpdate: 0
+	};
+}
 
 // Create the store
 function createMarketStore() {
-	const { subscribe, set, update } = writable<MarketState>(initialState);
+	const { subscribe, set, update } = writable<MarketState>(createInitialState());
 
 	let wsUnsubscribe: (() => void) | null = null;
 
@@ -233,7 +236,7 @@ function createMarketStore() {
 		 * Reset the store.
 		 */
 		reset() {
-			set(initialState);
+			set(createInitialState());
 		}
 	};
 }

@@ -11,7 +11,10 @@
 		"lint": "eslint .",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
-		"validate": "npm run check && npm run lint && npm run format:check && npm run build"
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"test:coverage": "vitest run --coverage",
+		"validate": "npm run check && npm run lint && npm run format:check && npm run test && npm run build"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
@@ -19,12 +22,16 @@
 		"@sveltejs/adapter-node": "^5.5.7",
 		"@sveltejs/kit": "^2.68.0",
 		"@sveltejs/vite-plugin-svelte": "^7.1.2",
+		"@testing-library/jest-dom": "^6.9.1",
+		"@testing-library/svelte": "^5.4.2",
 		"@types/node": "^26.0.1",
+		"@vitest/coverage-v8": "^4.1.10",
 		"autoprefixer": "^10.5.2",
 		"eslint": "^10.6.0",
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-svelte": "^3.20.0",
 		"globals": "^17.7.0",
+		"jsdom": "^29.1.1",
 		"postcss": "^8.5.15",
 		"prettier": "^3.8.5",
 		"prettier-plugin-svelte": "^4.1.1",
@@ -33,7 +40,8 @@
 		"tailwindcss": "^3.4.19",
 		"typescript": "^6.0.3",
 		"typescript-eslint": "^8.62.0",
-		"vite": "^8.1.0"
+		"vite": "^8.1.0",
+		"vitest": "^4.1.10"
 	},
 	"type": "module"
 }
