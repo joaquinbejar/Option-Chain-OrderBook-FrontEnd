@@ -1,8 +1,9 @@
 /**
- * Execution monitor store — accumulates WS `fill` frames for the session.
- * Fill prices and edge arrive as INTEGER CENTS and convert to dollars here,
- * exactly once. The backend does not (yet) provide a fills history endpoint,
- * so this is a session-scoped live feed, empty until the first fill arrives.
+ * Execution monitor store — accumulates WS `fill` frames while the
+ * /executions view is open (the page resets it on mount, so counters read
+ * "since this view opened" truthfully). Fill prices and edge arrive as
+ * INTEGER CENTS and convert to dollars here, exactly once. The backend does
+ * not (yet) provide a fills history endpoint.
  */
 
 import { derived, writable } from 'svelte/store';
@@ -32,7 +33,7 @@ export interface ExecutionFill {
 export interface ExecutionsState {
 	/** Newest first, capped at MAX_FILLS. */
 	fills: ExecutionFill[];
-	/** Every fill seen this session, including ones dropped by the cap. */
+	/** Every fill seen since the view opened, including ones dropped by the cap. */
 	totalReceived: number;
 }
 

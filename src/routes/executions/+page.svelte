@@ -4,6 +4,9 @@
 	import { systemStore } from '$lib/stores/system';
 
 	onMount(() => {
+		// The counters claim "since this view opened" — make that true on every
+		// visit, not just the first mount of the module singleton.
+		executionsStore.reset();
 		executionsStore.init();
 		return () => executionsStore.disconnect();
 	});
