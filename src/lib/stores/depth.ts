@@ -111,7 +111,9 @@ function createDepthStore() {
 		 */
 		async loadBooks(underlying: string, expiration: string, strike: number) {
 			const requestGeneration = ++generation;
-			update((s) => ({ ...s, loading: true, error: null }));
+			// Drop the previous books immediately — a point-in-time view must not
+			// keep showing the old selection's depth under the new header.
+			set({ call: null, put: null, loading: true, error: null });
 
 			const [callRes, putRes] = await Promise.allSettled([
 				api.getOptionSnapshot(underlying, expiration, strike, 'call', DEPTH_LEVELS),

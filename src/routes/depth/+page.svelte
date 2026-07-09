@@ -51,6 +51,7 @@
 	}
 
 	async function onUnderlyingChange() {
+		listError = null;
 		expirations = [];
 		strikes = [];
 		selectedExpiration = '';
@@ -74,6 +75,7 @@
 	}
 
 	async function onExpirationChange() {
+		listError = null;
 		strikes = [];
 		selectedStrike = 0;
 		depthStore.reset();
