@@ -157,6 +157,18 @@ describe('market store — lifecycle', () => {
 		expect(get(marketStore).prices.has('BTC')).toBe(false);
 	});
 
+	it('a second init() replaces the WS handler instead of stacking it', async () => {
+		vi.mocked(api.listUnderlyings).mockResolvedValue({ underlyings: [] });
+		vi.mocked(api.getAllPrices).mockResolvedValue([]);
+
+		await marketStore.init();
+		await marketStore.init(); // remount / re-init must replace, not accumulate
+		marketStore.disconnect(); // a single disconnect must silence everything
+
+		fakeWs.emit({ type: 'price', data: { symbol: 'BTC', price_cents: 100 } });
+		expect(get(marketStore).prices.has('BTC')).toBe(false);
+	});
+
 	it('loadStrikes() surfaces a failure as an empty list, not a throw', async () => {
 		vi.mocked(api.listStrikes).mockRejectedValue(new Error('boom'));
 		vi.spyOn(console, 'error').mockImplementation(() => {});

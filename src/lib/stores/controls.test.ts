@@ -43,6 +43,7 @@ async function initStore() {
 }
 
 beforeEach(() => {
+	controlsStore.disconnect(); // drop any WS subscription left by a previous test
 	controlsStore.reset();
 	vi.clearAllMocks();
 });
@@ -357,6 +358,35 @@ describe('controls store — instruments', () => {
 		const s = get(controlsStore);
 		expect(s.instruments.find((i) => i.symbol === 'BTC')?.isQuotingEnabled).toBe(false);
 		expect(s.instruments.find((i) => i.symbol === 'ETH')?.isQuotingEnabled).toBe(false); // untouched
+	});
+});
+
+describe('controls store — subscription lifecycle', () => {
+	it('a double init never stacks handlers — one disconnect silences all frames', async () => {
+		await initStore();
+		await initStore(); // remount / re-init must replace, not accumulate
+
+		controlsStore.disconnect();
+
+		fakeWs.emit({
+			type: 'config',
+			data: { enabled: false, spread_multiplier: 9, size_scalar: 0.1, directional_skew: 1 }
+		});
+
+		const s = get(controlsStore);
+		expect(s.masterSwitch).toBe(true); // a leaked handler would have applied the frame
+		expect(s.spreadMultiplier).toBe(1.5);
+	});
+
+	it('disconnect() stops WS frames from mutating state', async () => {
+		await initStore();
+		controlsStore.disconnect();
+
+		fakeWs.emit({ type: 'price', data: { symbol: 'BTC', price_cents: 1 } });
+
+		expect(get(controlsStore).instruments.find((i) => i.symbol === 'BTC')?.currentPrice).toBe(
+			50_000
+		);
 	});
 });
 

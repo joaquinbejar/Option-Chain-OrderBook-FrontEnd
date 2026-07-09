@@ -114,6 +114,10 @@ function createMarketStore() {
 			const ws = getWebSocketClient();
 			ws.connect();
 
+			// Re-init must not leak the previous handler.
+			if (wsUnsubscribe) {
+				wsUnsubscribe();
+			}
 			wsUnsubscribe = ws.subscribe((message: WsMessage) => {
 				this.handleWsMessage(message);
 			});

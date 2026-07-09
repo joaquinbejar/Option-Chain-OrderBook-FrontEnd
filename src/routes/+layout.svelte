@@ -4,14 +4,20 @@
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import Header from '$lib/components/Header.svelte';
 	import { systemStore } from '$lib/stores/system';
+	import { controlsStore } from '$lib/stores/controls';
 
 	let { children } = $props();
 
-	// The app shell owns the system store lifecycle: connection poll +
-	// heartbeat subscription start on mount and tear down with the shell.
+	// The app shell owns the system and controls store lifecycles: the Header
+	// (kill switch, connection pill) needs both on every route. Teardown runs
+	// with the shell.
 	onMount(() => {
 		systemStore.init();
-		return () => systemStore.disconnect();
+		controlsStore.init();
+		return () => {
+			systemStore.disconnect();
+			controlsStore.disconnect();
+		};
 	});
 </script>
 

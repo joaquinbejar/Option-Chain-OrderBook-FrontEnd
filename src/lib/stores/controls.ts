@@ -91,34 +91,43 @@ function createControlsStore() {
 		}
 	};
 
-	// Subscribe to WebSocket config updates
-	if (typeof window !== 'undefined') {
-		const ws = getWebSocketClient();
-		ws.subscribe((msg: WsMessage) => {
-			if (msg.type === 'config') {
-				update((s) => ({
-					...s,
-					masterSwitch: msg.data.enabled,
-					spreadMultiplier: msg.data.spread_multiplier,
-					// Backend reads expose size_scalar as a fraction [0, 1]; the UI
-					// (and the write API) speak percent [0, 100].
-					sizeScalar: msg.data.size_scalar * 100,
-					directionalSkew: msg.data.directional_skew
-				}));
-			} else if (msg.type === 'price') {
-				update((s) => ({
-					...s,
-					instruments: s.instruments.map((i) =>
-						i.symbol === msg.data.symbol ? { ...i, currentPrice: msg.data.price_cents / 100 } : i
-					)
-				}));
-			}
-		});
-	}
+	let wsUnsubscribe: (() => void) | null = null;
+
+	const handleWsMessage = (msg: WsMessage) => {
+		if (msg.type === 'config') {
+			update((s) => ({
+				...s,
+				masterSwitch: msg.data.enabled,
+				spreadMultiplier: msg.data.spread_multiplier,
+				// Backend reads expose size_scalar as a fraction [0, 1]; the UI
+				// (and the write API) speak percent [0, 100].
+				sizeScalar: msg.data.size_scalar * 100,
+				directionalSkew: msg.data.directional_skew
+			}));
+		} else if (msg.type === 'price') {
+			update((s) => ({
+				...s,
+				instruments: s.instruments.map((i) =>
+					i.symbol === msg.data.symbol ? { ...i, currentPrice: msg.data.price_cents / 100 } : i
+				)
+			}));
+		}
+	};
 
 	return {
 		subscribe,
 		init: async () => {
+			// Connect and subscribe before the REST load so config frames during
+			// the fetch are not missed; re-init drops the previous handler first,
+			// so a double init can never leak a subscription.
+			if (typeof window !== 'undefined') {
+				const ws = getWebSocketClient();
+				ws.connect();
+				if (wsUnsubscribe) {
+					wsUnsubscribe();
+				}
+				wsUnsubscribe = ws.subscribe(handleWsMessage);
+			}
 			try {
 				const [controls, instrumentsResp] = await Promise.all([
 					api.getControls(),
@@ -141,11 +150,6 @@ function createControlsStore() {
 					})),
 					loading: false
 				}));
-
-				// Connect WebSocket after initial load
-				if (typeof window !== 'undefined') {
-					getWebSocketClient().connect();
-				}
 			} catch (e) {
 				console.error('Failed to initialize controls:', e);
 				update((s) => ({
@@ -224,6 +228,13 @@ function createControlsStore() {
 			}
 		},
 		clearError: () => update((s) => ({ ...s, error: null })),
+		/** Drop this store's WS subscription (the shared socket stays open). */
+		disconnect: () => {
+			if (wsUnsubscribe) {
+				wsUnsubscribe();
+				wsUnsubscribe = null;
+			}
+		},
 		reset: () =>
 			set({
 				masterSwitch: true,
