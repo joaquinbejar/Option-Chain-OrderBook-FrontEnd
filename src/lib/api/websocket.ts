@@ -1,6 +1,12 @@
 /**
  * WebSocket client for real-time updates from the backend.
+ *
+ * Auth: browsers cannot set headers on the upgrade, so the JWT travels as a
+ * `?token=<jwt>` query parameter, read fresh from the data-layer token holder
+ * on every (re)connect. Without a token, connect() is a no-op — the backend
+ * would reject the upgrade with 401 anyway.
  */
+import { getAuthToken } from '$lib/api/auth-token';
 
 export type WsMessageType = 'quote' | 'fill' | 'config' | 'price' | 'connected' | 'heartbeat';
 
@@ -95,6 +101,8 @@ export class WebSocketClient {
 	private maxReconnectAttempts = 10;
 	private reconnectDelay = 1000;
 	private isConnecting = false;
+	private deliberateClose = false;
+	private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
 	constructor(url: string = 'ws://localhost:8080/ws') {
 		this.url = url;
@@ -108,10 +116,20 @@ export class WebSocketClient {
 			return;
 		}
 
+		const token = getAuthToken();
+		if (!token) {
+			// No credentials yet — the auth store reconnects consumers on login.
+			return;
+		}
+
+		// An explicit connect() (page mount, re-login) re-arms auto-reconnect
+		// after a deliberate close and supersedes any pending backoff timer.
+		this.deliberateClose = false;
+		this.clearReconnectTimer();
 		this.isConnecting = true;
 
 		try {
-			this.ws = new WebSocket(this.url);
+			this.ws = new WebSocket(`${this.url}?token=${encodeURIComponent(token)}`);
 
 			this.ws.onopen = () => {
 				console.log('WebSocket connected');
@@ -132,6 +150,10 @@ export class WebSocketClient {
 				console.log('WebSocket closed:', event.code, event.reason);
 				this.isConnecting = false;
 				this.ws = null;
+				if (this.deliberateClose) {
+					this.deliberateClose = false;
+					return;
+				}
 				this.scheduleReconnect();
 			};
 
@@ -147,13 +169,28 @@ export class WebSocketClient {
 	}
 
 	/**
-	 * Disconnect from the WebSocket server.
+	 * Disconnect from the WebSocket server. A deliberate close never
+	 * auto-reconnects; a later explicit connect() re-arms reconnection.
 	 */
 	disconnect(): void {
-		this.reconnectAttempts = this.maxReconnectAttempts; // Prevent reconnection
+		this.deliberateClose = true;
+		// A handshake may be in flight — clear the flag so a later explicit
+		// connect() (e.g. fast re-login) is not silently swallowed.
+		this.isConnecting = false;
+		// A reconnect may be sitting in its backoff gap — a deliberate close
+		// must cancel it, or the socket resurrects itself.
+		this.clearReconnectTimer();
+		this.reconnectAttempts = 0;
 		if (this.ws) {
 			this.ws.close();
 			this.ws = null;
+		}
+	}
+
+	private clearReconnectTimer(): void {
+		if (this.reconnectTimer !== null) {
+			clearTimeout(this.reconnectTimer);
+			this.reconnectTimer = null;
 		}
 	}
 
@@ -192,7 +229,8 @@ export class WebSocketClient {
 
 		console.log(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
 
-		setTimeout(() => {
+		this.reconnectTimer = setTimeout(() => {
+			this.reconnectTimer = null;
 			this.connect();
 		}, delay);
 	}

@@ -8,18 +8,23 @@ vi.mock('$lib/api/websocket', async (importOriginal) => {
 	return { ...real, getWebSocketClient: () => fake };
 });
 
-vi.mock('$lib/api/client', () => ({
-	api: {
-		getControls: vi.fn(),
-		listInstruments: vi.fn(),
-		killSwitch: vi.fn(),
-		enableQuoting: vi.fn(),
-		updateParameters: vi.fn(),
-		toggleInstrument: vi.fn()
-	}
-}));
+vi.mock('$lib/api/client', async (importOriginal) => {
+	const real = await importOriginal<typeof import('$lib/api/client')>();
+	return {
+		...real, // keep ApiError
+		api: {
+			getControls: vi.fn(),
+			listInstruments: vi.fn(),
+			killSwitch: vi.fn(),
+			enableQuoting: vi.fn(),
+			updateParameters: vi.fn(),
+			toggleInstrument: vi.fn()
+		}
+	};
+});
 
 import { controlsStore } from './controls';
+import { ApiError } from '$lib/api/client';
 import { getWebSocketClient } from '$lib/api/websocket';
 import { api } from '$lib/api/client';
 import type { FakeWsClient } from '$lib/__tests__/mocks';
@@ -168,6 +173,17 @@ describe('controls store — halt / resume intents', () => {
 		await controlsStore.halt();
 
 		expect(get(controlsStore).masterSwitch).toBe(true);
+	});
+
+	it('a 403 is reported as a permission denial, not a transient failure', async () => {
+		await initStore();
+		vi.mocked(api.killSwitch).mockRejectedValue(new ApiError('Forbidden', 403));
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+
+		await controlsStore.halt();
+
+		expect(get(controlsStore).masterSwitch).toBe(true);
+		expect(get(controlsStore).error).toMatch(/admin token/);
 	});
 });
 
@@ -362,6 +378,46 @@ describe('controls store — instruments', () => {
 });
 
 describe('controls store — subscription lifecycle', () => {
+	it('a stale init response never overwrites a newer session', async () => {
+		type Controls = {
+			master_enabled: boolean;
+			spread_multiplier: number;
+			size_scalar: number;
+			directional_skew: number;
+		};
+		let resolveStale!: (v: Controls) => void;
+		vi.mocked(api.getControls)
+			.mockReturnValueOnce(
+				new Promise((resolve) => {
+					resolveStale = resolve;
+				})
+			)
+			.mockResolvedValueOnce({
+				master_enabled: true,
+				spread_multiplier: 2.5,
+				size_scalar: 0.5,
+				directional_skew: 0
+			});
+		vi.mocked(api.listInstruments).mockResolvedValue({ instruments: [] });
+
+		const stale = controlsStore.init(); // session A, hangs
+		controlsStore.disconnect(); // session A drops
+		await controlsStore.init(); // session B lands
+		expect(get(controlsStore).spreadMultiplier).toBe(2.5);
+
+		resolveStale({
+			master_enabled: false,
+			spread_multiplier: 9,
+			size_scalar: 0.1,
+			directional_skew: 1
+		});
+		await stale;
+
+		// Session A's late response was dropped.
+		expect(get(controlsStore).spreadMultiplier).toBe(2.5);
+		expect(get(controlsStore).masterSwitch).toBe(true);
+	});
+
 	it('a double init never stacks handlers — one disconnect silences all frames', async () => {
 		await initStore();
 		await initStore(); // remount / re-init must replace, not accumulate

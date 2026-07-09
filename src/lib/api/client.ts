@@ -11,29 +11,62 @@
  * - `size_scalar` is asymmetric on the backend: GET `/controls` (and the WS
  *   `config` frame) return a FRACTION in [0, 1], while POST
  *   `/controls/parameters` expects a PERCENT in [0, 100].
+ *
+ * Auth: every route except `/health` and `POST /auth/token` requires
+ * `Authorization: Bearer <jwt>`. Permissions are JWT claims (`read`, `trade`,
+ * `admin` — admin implies all); the market-maker controls need `admin`.
  */
+import { getAuthToken, notifyUnauthorized } from '$lib/api/auth-token';
 const API_BASE = '/api/v1';
 
+/** Non-2xx responses throw this; `status` lets callers tell 401/403 apart. */
+export class ApiError extends Error {
+	readonly status: number;
+
+	constructor(message: string, status: number) {
+		super(message);
+		this.name = 'ApiError';
+		this.status = status;
+	}
+}
+
 async function fetchApi<T>(endpoint: string, options?: RequestInit, base = API_BASE): Promise<T> {
+	const token = getAuthToken();
 	const response = await fetch(`${base}${endpoint}`, {
 		headers: {
 			'Content-Type': 'application/json',
+			// Every route except /health and /auth/token requires the JWT.
+			...(token ? { Authorization: `Bearer ${token}` } : {}),
 			...options?.headers
 		},
 		...options
 	});
 
 	if (!response.ok) {
+		// A 401 means the session token is no longer accepted. A failed mint
+		// (/auth/token with a wrong secret) is NOT a session event.
+		if (response.status === 401 && endpoint !== '/auth/token') {
+			notifyUnauthorized();
+		}
 		const error = await response.json().catch(() => ({ message: 'Unknown error' }));
-		throw new Error(error.message || `HTTP ${response.status}`);
+		throw new ApiError(error.message || `HTTP ${response.status}`, response.status);
 	}
 
 	return response.json();
 }
 
+export type Permission = 'read' | 'trade' | 'admin';
+
 export const api = {
 	// Health — the backend registers /health unprefixed, NOT under /api/v1.
 	health: () => fetchApi<{ status: string; version: string }>('/health', undefined, ''),
+
+	// Auth — mint a JWT; gated by the operator's AUTH_BOOTSTRAP_SECRET.
+	issueToken: (secret: string, permissions: Permission[], ttlSecs?: number) =>
+		fetchApi<{ token: string; expires_at: string }>('/auth/token', {
+			method: 'POST',
+			body: JSON.stringify({ secret, permissions, ttl_secs: ttlSecs })
+		}),
 
 	// Stats
 	getStats: () =>
