@@ -125,6 +125,18 @@ export const api = {
 			`/underlyings/${underlying}/expirations/${expiration}/strikes/${strike}/options/${style}/quote`
 		),
 
+	/** Per-level order-book snapshot. `depth`: 'top' (default), a level count, or 'full'. */
+	getOptionSnapshot: (
+		underlying: string,
+		expiration: string,
+		strike: number,
+		style: 'call' | 'put',
+		depth: 'top' | 'full' | number = 'top'
+	) =>
+		fetchApi<EnrichedSnapshotResponse>(
+			`/underlyings/${underlying}/expirations/${expiration}/strikes/${strike}/options/${style}/snapshot?depth=${depth}`
+		),
+
 	// Controls
 	getControls: () =>
 		fetchApi<{
@@ -228,4 +240,36 @@ export interface QuoteResponse {
 	ask_price: number | null;
 	ask_size: number;
 	timestamp_ms: number;
+}
+
+/** One aggregated book level. `price` is INTEGER CENTS; `quantity` is contracts. */
+export interface PriceLevelInfo {
+	price: number;
+	quantity: number;
+	order_count: number;
+}
+
+/** Pre-calculated snapshot statistics. Prices are CENTS (floats); null = empty side. */
+export interface SnapshotStats {
+	mid_price: number | null;
+	spread_bps: number | null;
+	bid_depth_total: number;
+	ask_depth_total: number;
+	/** Order book imbalance in [-1, 1]. */
+	imbalance: number;
+	vwap_bid: number | null;
+	vwap_ask: number | null;
+}
+
+/**
+ * Per-level order-book snapshot. `bids` sorted by price descending, `asks`
+ * ascending; level prices are INTEGER CENTS — convert once, in a store.
+ */
+export interface EnrichedSnapshotResponse {
+	symbol: string;
+	sequence: number;
+	timestamp_ms: number;
+	bids: PriceLevelInfo[];
+	asks: PriceLevelInfo[];
+	stats: SnapshotStats;
 }
