@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { systemStore } from '$lib/stores/system';
 	import { controlsStore } from '$lib/stores/controls';
+	import { authStore, isAdmin } from '$lib/stores/auth';
 	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 
 	let showKillConfirm = $state(false);
 
 	function handleKillSwitch() {
+		if (!$isAdmin) return; // controls require an admin token
 		if ($controlsStore.masterSwitch) {
 			// Halting is destructive (cancels all open orders) — confirm first.
 			showKillConfirm = true;
@@ -21,9 +23,9 @@
 	}
 
 	// If quoting halts while the dialog is open (another client, a backend
-	// risk kill), the question is stale — dismiss it.
+	// risk kill) or the session ends, the question is stale — dismiss it.
 	$effect(() => {
-		if (!$controlsStore.masterSwitch) {
+		if (!$controlsStore.masterSwitch || !$authStore.authenticated) {
 			showKillConfirm = false;
 		}
 	});
@@ -76,33 +78,65 @@
 		</div>
 	</div>
 	<div class="flex items-center gap-3">
-		<!-- Kill Switch -->
-		<button
-			onclick={handleKillSwitch}
-			class="flex items-center gap-2 h-9 px-4 text-white text-sm font-bold rounded-lg transition-colors shadow-lg {$controlsStore.masterSwitch
-				? 'bg-danger hover:bg-red-600 shadow-red-900/20'
-				: 'bg-success hover:bg-green-600 shadow-green-900/20'}"
-		>
-			<span class="material-symbols-outlined text-[18px]">power_settings_new</span>
-			<span class="hidden sm:inline"
-				>{$controlsStore.masterSwitch ? 'Kill Switch' : 'Activate Quoting'}</span
+		{#if $authStore.authenticated}
+			<!-- Kill Switch — controls need an admin token -->
+			<button
+				onclick={handleKillSwitch}
+				disabled={!$isAdmin}
+				title={$isAdmin ? undefined : 'Requires an admin token'}
+				class="flex items-center gap-2 h-9 px-4 text-white text-sm font-bold rounded-lg transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed {$controlsStore.masterSwitch
+					? 'bg-danger hover:bg-red-600 shadow-red-900/20'
+					: 'bg-success hover:bg-green-600 shadow-green-900/20'}"
 			>
-		</button>
-		<div class="h-6 w-px bg-border-dark mx-1"></div>
-		<button
-			aria-label="Notifications"
-			class="w-9 h-9 flex items-center justify-center rounded-lg bg-[#232f48] text-white hover:bg-primary hover:text-white transition-colors"
-		>
-			<span class="material-symbols-outlined text-[20px]">notifications</span>
-		</button>
+				<span class="material-symbols-outlined text-[18px]">power_settings_new</span>
+				<span class="hidden sm:inline"
+					>{$controlsStore.masterSwitch ? 'Kill Switch' : 'Activate Quoting'}</span
+				>
+			</button>
+			<div class="h-6 w-px bg-border-dark mx-1"></div>
+			{#if $authStore.expiringSoon}
+				<div
+					role="status"
+					class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-warning/10 text-warning"
+					title="Re-authenticate before the session drops"
+				>
+					<span class="material-symbols-outlined text-sm" aria-hidden="true">schedule</span>
+					<span class="text-xs font-bold uppercase tracking-wider">Session expiring soon</span>
+				</div>
+			{/if}
+			<div
+				class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-dark"
+				title="Token permissions"
+			>
+				<span class="material-symbols-outlined text-text-muted text-sm" aria-hidden="true"
+					>badge</span
+				>
+				<span class="text-xs text-white font-mono">{$authStore.sub}</span>
+				<span class="text-xs text-text-muted font-mono">[{$authStore.permissions.join(', ')}]</span>
+			</div>
+			<button
+				aria-label="Log out"
+				title="Log out"
+				onclick={() => authStore.logout()}
+				class="w-9 h-9 flex items-center justify-center rounded-lg bg-[#232f48] text-white hover:bg-danger transition-colors"
+			>
+				<span class="material-symbols-outlined text-[20px]">logout</span>
+			</button>
+		{:else}
+			<span class="text-xs text-text-muted uppercase font-bold tracking-wider">
+				Not authenticated
+			</span>
+		{/if}
 	</div>
 </header>
 
-<ConfirmDialog
-	open={showKillConfirm}
-	title="Halt all quoting?"
-	message="This fires the kill switch: every open order is cancelled immediately and no new quotes are sent until quoting is re-enabled."
-	confirmLabel="Halt quoting"
-	onconfirm={confirmKill}
-	oncancel={() => (showKillConfirm = false)}
-/>
+{#if $authStore.authenticated}
+	<ConfirmDialog
+		open={showKillConfirm}
+		title="Halt all quoting?"
+		message="This fires the kill switch: every open order is cancelled immediately and no new quotes are sent until quoting is re-enabled."
+		confirmLabel="Halt quoting"
+		onconfirm={confirmKill}
+		oncancel={() => (showKillConfirm = false)}
+	/>
+{/if}

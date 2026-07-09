@@ -3,11 +3,13 @@
 	import { controlsStore } from '$lib/stores/controls';
 	import { systemStore } from '$lib/stores/system';
 	import { marketStore, priceList } from '$lib/stores/market';
+	import { isAdmin } from '$lib/stores/auth';
 	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 
 	let showHaltConfirm = $state(false);
 
 	function handleMasterToggle() {
+		if (!$isAdmin) return; // quoting controls require an admin token
 		if ($controlsStore.masterSwitch) {
 			// Halting is destructive (cancels all open orders) — confirm first.
 			showHaltConfirm = true;
@@ -110,6 +112,15 @@
 		</div>
 	</div>
 
+	{#if !$isAdmin}
+		<div
+			class="flex items-center gap-2 bg-warning/10 border border-warning/30 rounded-lg px-4 py-3 text-sm font-medium text-warning"
+		>
+			<span class="material-symbols-outlined text-base" aria-hidden="true">lock</span>
+			Read-only token — the quoting controls below require an admin token.
+		</div>
+	{/if}
+
 	<!-- Command failures surface here, not just in the console -->
 	{#if $controlsStore.error}
 		<div
@@ -171,7 +182,9 @@
 				<button
 					aria-label="Toggle master quoting switch"
 					onclick={handleMasterToggle}
-					class="relative flex h-[31px] w-[51px] cursor-pointer items-center rounded-full p-0.5 transition-colors duration-200 {$controlsStore.masterSwitch
+					disabled={!$isAdmin}
+					title={$isAdmin ? undefined : 'Requires an admin token'}
+					class="relative flex h-[31px] w-[51px] cursor-pointer items-center rounded-full p-0.5 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed {$controlsStore.masterSwitch
 						? 'justify-end bg-success'
 						: 'justify-start bg-[#232f48]'}"
 				>
@@ -268,6 +281,7 @@
 						max="5.0"
 						step="0.1"
 						id="ctl-spread"
+						disabled={!$isAdmin}
 						value={$controlsStore.spreadMultiplier}
 						oninput={handleSpreadChange}
 						class="flex-1 accent-primary h-2 bg-border-dark rounded-lg appearance-none cursor-pointer"
@@ -294,6 +308,7 @@
 						max="100"
 						step="10"
 						id="ctl-size"
+						disabled={!$isAdmin}
 						value={$controlsStore.sizeScalar}
 						oninput={handleSizeChange}
 						class="w-full accent-primary h-2 bg-border-dark rounded-lg appearance-none cursor-pointer mb-2"
@@ -318,6 +333,7 @@
 							max="1"
 							step="0.1"
 							id="ctl-skew"
+							disabled={!$isAdmin}
 							value={$controlsStore.directionalSkew}
 							oninput={handleSkewChange}
 							class="w-full accent-primary h-2 bg-border-dark rounded-lg appearance-none cursor-pointer z-10 relative"
@@ -392,6 +408,8 @@
 						<button
 							aria-label={`Toggle quoting for ${instrument.symbol}`}
 							onclick={() => controlsStore.toggleInstrument(instrument.symbol)}
+							disabled={!$isAdmin}
+							title={$isAdmin ? undefined : 'Requires an admin token'}
 							class="relative flex h-6 w-11 cursor-pointer items-center rounded-full p-0.5 transition-colors {instrument.isQuotingEnabled
 								? 'justify-end bg-success'
 								: 'justify-start bg-[#232f48]'}"

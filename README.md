@@ -100,6 +100,10 @@ The frontend expects a REST API at `/api/v1` with the following endpoints:
 
 A WebSocket at `/ws` pushes real-time frames (`quote`, `price`, `fill`, `config`, `connected`, `heartbeat`); option prices on the wire are integer cents. `/executions` is fed entirely by the `fill` frames.
 
+### Authentication
+
+Every route except `/health` and `POST /auth/token` requires a JWT. The console gates the whole UI behind a token screen: paste a token minted by the operator (backend `mint-token` CLI) or mint one via `POST /api/v1/auth/token` with the backend's `AUTH_BOOTSTRAP_SECRET`. REST calls carry `Authorization: Bearer <jwt>`; the WebSocket connects with `?token=<jwt>` because browsers cannot set upgrade headers — the token therefore appears in the WS URL (and in any proxy/access log fronting `/ws`), which argues for short TTLs. Permissions are JWT claims — `read`, `trade`, `admin` (admin implies all); the quoting controls (kill switch, parameters, instrument toggles) are disabled in the UI without `admin` and rejected by the backend with 403 regardless — the UI gating is UX, the backend is the enforcement. The token lives in `sessionStorage` (per-tab, cleared on close) and is never written to the console. The session warns 5 minutes before expiry, then drops to the auth screen 30 s before the `exp` claim or immediately on a backend 401; re-authenticate to continue (the console does not retain the bootstrap secret, so there is no silent auto-refresh, and there is no idle-timeout logout).
+
 ## Configuration
 
 The Vite dev server proxies `/api` requests to `http://localhost:8080` by default. Update `vite.config.ts` to change the backend URL.

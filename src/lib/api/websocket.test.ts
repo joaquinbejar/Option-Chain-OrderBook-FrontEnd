@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { WebSocketClient, type WsMessage } from './websocket';
+import { setAuthToken } from './auth-token';
 
 /** Deterministic stand-in for the global WebSocket. */
 class FakeWebSocket {
@@ -55,12 +56,29 @@ beforeEach(() => {
 	vi.stubGlobal('WebSocket', FakeWebSocket);
 	vi.spyOn(console, 'log').mockImplementation(() => {});
 	vi.spyOn(console, 'error').mockImplementation(() => {});
+	setAuthToken('test-jwt'); // connect() refuses to dial without a token
 });
 
 afterEach(() => {
+	setAuthToken(null);
 	vi.unstubAllGlobals();
 	vi.useRealTimers();
 	vi.restoreAllMocks();
+});
+
+describe('WebSocketClient — auth', () => {
+	it('appends the JWT as a token query parameter', () => {
+		const client = new WebSocketClient('ws://test/ws');
+		client.connect();
+		expect(lastSocket().url).toBe('ws://test/ws?token=test-jwt');
+	});
+
+	it('connect() is a no-op without a token', () => {
+		setAuthToken(null);
+		const client = new WebSocketClient('ws://test/ws');
+		client.connect();
+		expect(FakeWebSocket.instances).toHaveLength(0);
+	});
 });
 
 describe('WebSocketClient — reconnect backoff', () => {
@@ -112,6 +130,17 @@ describe('WebSocketClient — reconnect backoff', () => {
 		expect(FakeWebSocket.instances).toHaveLength(3);
 		vi.advanceTimersByTime(1);
 		expect(FakeWebSocket.instances).toHaveLength(4); // back to 1s, not 4s
+	});
+
+	it('disconnect() during the backoff gap cancels the pending reconnect', () => {
+		const client = new WebSocketClient('ws://test/ws');
+		client.connect();
+		lastSocket().drop(); // schedules a reconnect in 1s; ws is now null
+
+		client.disconnect(); // deliberate close while the timer is pending
+
+		vi.runAllTimers();
+		expect(FakeWebSocket.instances).toHaveLength(1); // never resurrected
 	});
 
 	it('disconnect() prevents any auto-reconnect', () => {

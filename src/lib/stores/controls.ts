@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
-import { api } from '$lib/api/client';
+import { api, ApiError } from '$lib/api/client';
 import { getWebSocketClient, type WsMessage } from '$lib/api/websocket';
 
 export interface ControlsState {
@@ -25,6 +25,10 @@ function createControlsStore() {
 	// Guards the halt/resume round-trip: a second click while the first
 	// request is in flight must not fire a second (possibly opposite) command.
 	let switchPending = false;
+
+	// A 403 is a permission denial, not a transient failure — say so, or the
+	// operator retries a command their token can never execute.
+	const isForbidden = (e: unknown): boolean => e instanceof ApiError && e.status === 403;
 
 	const { subscribe, set, update } = writable<ControlsState>({
 		masterSwitch: true,
@@ -86,12 +90,18 @@ function createControlsStore() {
 			update((s) => ({
 				...s,
 				[field]: previous,
-				error: `Failed to update the ${label} — the change was not applied.`
+				error: isForbidden(e)
+					? `Permission denied — changing the ${label} requires an admin token.`
+					: `Failed to update the ${label} — the change was not applied.`
 			}));
 		}
 	};
 
 	let wsUnsubscribe: (() => void) | null = null;
+
+	// init() re-runs on every re-login (the layout $effect); a stale REST
+	// response from a previous session must not overwrite the fresh one.
+	let initGeneration = 0;
 
 	const handleWsMessage = (msg: WsMessage) => {
 		if (msg.type === 'config') {
@@ -117,6 +127,7 @@ function createControlsStore() {
 	return {
 		subscribe,
 		init: async () => {
+			const generation = ++initGeneration;
 			// Connect and subscribe before the REST load so config frames during
 			// the fetch are not missed; re-init drops the previous handler first,
 			// so a double init can never leak a subscription.
@@ -133,6 +144,7 @@ function createControlsStore() {
 					api.getControls(),
 					api.listInstruments()
 				]);
+				if (generation !== initGeneration) return; // superseded by a newer session
 
 				update((s) => ({
 					...s,
@@ -151,6 +163,7 @@ function createControlsStore() {
 					loading: false
 				}));
 			} catch (e) {
+				if (generation !== initGeneration) return; // superseded by a newer session
 				console.error('Failed to initialize controls:', e);
 				update((s) => ({
 					...s,
@@ -177,7 +190,9 @@ function createControlsStore() {
 				console.error('Failed to fire the kill switch:', e);
 				update((s) => ({
 					...s,
-					error: 'Kill switch command failed — quoting state is unchanged.'
+					error: isForbidden(e)
+						? 'Permission denied — the kill switch requires an admin token.'
+						: 'Kill switch command failed — quoting state is unchanged.'
 				}));
 			} finally {
 				switchPending = false;
@@ -196,7 +211,9 @@ function createControlsStore() {
 				console.error('Failed to re-enable quoting:', e);
 				update((s) => ({
 					...s,
-					error: 'Enable-quoting command failed — quoting state is unchanged.'
+					error: isForbidden(e)
+						? 'Permission denied — enabling quoting requires an admin token.'
+						: 'Enable-quoting command failed — quoting state is unchanged.'
 				}));
 			} finally {
 				switchPending = false;
@@ -223,13 +240,16 @@ function createControlsStore() {
 				console.error('Failed to toggle instrument:', e);
 				update((s) => ({
 					...s,
-					error: `Failed to toggle quoting for ${symbol} — its state is unchanged.`
+					error: isForbidden(e)
+						? `Permission denied — toggling ${symbol} requires an admin token.`
+						: `Failed to toggle quoting for ${symbol} — its state is unchanged.`
 				}));
 			}
 		},
 		clearError: () => update((s) => ({ ...s, error: null })),
 		/** Drop this store's WS subscription (the shared socket stays open). */
 		disconnect: () => {
+			initGeneration++; // an in-flight init must not land after teardown
 			if (wsUnsubscribe) {
 				wsUnsubscribe();
 				wsUnsubscribe = null;
