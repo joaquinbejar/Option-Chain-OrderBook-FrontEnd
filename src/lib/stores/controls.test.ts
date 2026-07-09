@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { get } from 'svelte/store';
 
 vi.mock('$lib/api/websocket', async (importOriginal) => {
@@ -45,6 +45,10 @@ async function initStore() {
 beforeEach(() => {
 	controlsStore.reset();
 	vi.clearAllMocks();
+});
+
+afterEach(() => {
+	vi.restoreAllMocks(); // un-spy console.error even if an assertion failed
 });
 
 describe('controls store — init', () => {
