@@ -117,14 +117,16 @@ function createControlsStore() {
 	return {
 		subscribe,
 		init: async () => {
-			// Subscribe before the REST load so config frames during the fetch
-			// are not missed; re-init drops the previous handler first, so a
-			// double init can never leak a subscription.
+			// Connect and subscribe before the REST load so config frames during
+			// the fetch are not missed; re-init drops the previous handler first,
+			// so a double init can never leak a subscription.
 			if (typeof window !== 'undefined') {
+				const ws = getWebSocketClient();
+				ws.connect();
 				if (wsUnsubscribe) {
 					wsUnsubscribe();
 				}
-				wsUnsubscribe = getWebSocketClient().subscribe(handleWsMessage);
+				wsUnsubscribe = ws.subscribe(handleWsMessage);
 			}
 			try {
 				const [controls, instrumentsResp] = await Promise.all([
@@ -148,11 +150,6 @@ function createControlsStore() {
 					})),
 					loading: false
 				}));
-
-				// Connect WebSocket after initial load
-				if (typeof window !== 'undefined') {
-					getWebSocketClient().connect();
-				}
 			} catch (e) {
 				console.error('Failed to initialize controls:', e);
 				update((s) => ({
