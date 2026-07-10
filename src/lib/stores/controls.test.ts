@@ -189,20 +189,22 @@ describe('controls store — halt / resume intents', () => {
 });
 
 describe('controls store — parameters', () => {
-	it('setSpreadMultiplier updates optimistically and calls the API', async () => {
+	it('setSpreadMultiplier updates optimistically and calls the API with snake_case', async () => {
 		await initStore();
-		// Unlike GET /controls, the POST response echoes size_scalar ×100.
+		// The POST response echoes size_scalar as a fraction, like GET.
 		vi.mocked(api.updateParameters).mockResolvedValue({
 			success: true,
 			spread_multiplier: 2,
-			size_scalar: 80,
+			size_scalar: 0.8,
 			directional_skew: 0.1
 		});
 
 		await controlsStore.setSpreadMultiplier(2);
 
 		expect(get(controlsStore).spreadMultiplier).toBe(2);
-		expect(api.updateParameters).toHaveBeenCalledWith({ spreadMultiplier: 2 });
+		// snake_case on the wire (backend #81) — camelCase keys are ignored
+		// by the backend and would turn the update into a no-op.
+		expect(api.updateParameters).toHaveBeenCalledWith({ spread_multiplier: 2 });
 	});
 
 	it('reverts the optimistic value and surfaces an error when the backend rejects', async () => {
@@ -224,7 +226,7 @@ describe('controls store — parameters', () => {
 		vi.mocked(api.updateParameters).mockResolvedValue({
 			success: true,
 			spread_multiplier: 5, // backend clamped 7 down to its max
-			size_scalar: 80,
+			size_scalar: 0.8,
 			directional_skew: 0.1
 		});
 
@@ -247,7 +249,7 @@ describe('controls store — parameters', () => {
 		vi.mocked(api.updateParameters).mockResolvedValue({
 			success: true,
 			spread_multiplier: 1.5,
-			size_scalar: 80,
+			size_scalar: 0.8,
 			directional_skew: 0.5
 		});
 		await controlsStore.setDirectionalSkew(0.5);
@@ -276,7 +278,7 @@ describe('controls store — parameters', () => {
 			.mockResolvedValueOnce({
 				success: true,
 				spread_multiplier: 2.5,
-				size_scalar: 80,
+				size_scalar: 0.8,
 				directional_skew: 0.1
 			});
 
@@ -311,7 +313,7 @@ describe('controls store — parameters', () => {
 			.mockResolvedValueOnce({
 				success: true,
 				spread_multiplier: 1.5,
-				size_scalar: 50,
+				size_scalar: 0.5,
 				directional_skew: 0.1
 			});
 
@@ -340,24 +342,39 @@ describe('controls store — parameters', () => {
 		expect(get(controlsStore).error).toBeNull();
 	});
 
-	it('size_scalar round-trips: fraction on read, percent on write', async () => {
-		// GET /controls returned 0.8 (fraction) — the store holds 80 (percent).
+	it('size_scalar round-trips the fraction form: read 0.5, write 0.5 (backend #82)', async () => {
+		// GET /controls returned 0.8 (fraction) — the store holds 80 (percent),
+		// with float noise (0.8 × 100 = 80.00000000000001) sanitized away.
 		await initStore();
-		expect(get(controlsStore).sizeScalar).toBeCloseTo(80);
+		expect(get(controlsStore).sizeScalar).toBe(80);
 
-		// The POST response echoes size_scalar as a percent (×100), unlike GET.
+		// The POST response echoes the fraction, same form as GET.
 		vi.mocked(api.updateParameters).mockResolvedValue({
 			success: true,
 			spread_multiplier: 1.5,
-			size_scalar: 60,
+			size_scalar: 0.6,
 			directional_skew: 0.1
 		});
 
-		// The write API expects percent [0, 100] — the store must not re-scale.
+		// UI slider speaks percent; the wire carries the fraction.
 		await controlsStore.setSizeScalar(60);
 
-		expect(api.updateParameters).toHaveBeenCalledWith({ sizeScalar: 60 });
+		expect(api.updateParameters).toHaveBeenCalledWith({ size_scalar: 0.6 });
 		expect(get(controlsStore).sizeScalar).toBe(60);
+	});
+
+	it('an out-of-range 400 reverts and surfaces the backend message', async () => {
+		await initStore();
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		vi.mocked(api.updateParameters).mockRejectedValue(
+			new ApiError('size_scalar must be between 0 and 1', 400)
+		);
+
+		await controlsStore.setSizeScalar(150);
+
+		const s = get(controlsStore);
+		expect(s.sizeScalar).toBe(80); // reverted to the pre-click value
+		expect(s.error).toMatch(/size_scalar must be between 0 and 1/);
 	});
 });
 
