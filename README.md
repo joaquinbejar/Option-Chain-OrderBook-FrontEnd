@@ -10,7 +10,7 @@ Re-add fresh captures against a live backend once the honest pages settle.
 
 ## Features
 
-- **Operational Controls** (`/controls`) - Master quoting switch (confirm-guarded, admin-only), global parameters with optimistic-update reconcile, instrument toggles, live underlying prices
+- **Operational Controls** (`/controls`) - Master quoting switch (confirm-guarded, admin-only), global parameters with optimistic-update reconcile, instrument toggles, cancel-all open orders (confirm-guarded, trade permission), live underlying prices
 - **Quote Matrix** (`/quotes`) - Live call/put quotes aligned by strike, streamed over the WebSocket; empty book sides render `—`
 - **Order Book Depth** (`/depth`) - Call/Put pair order book depth from point-in-time backend snapshots (per-option Greeks and IV are not yet provided by the backend and render as `—`)
 - **Risk Commander** (`/risk`) - Layout for portfolio Greeks / inventory / hedging; the backend does not expose positions or hedging yet, so every widget shows an honest placeholder
@@ -111,6 +111,7 @@ The typed client in `src/lib/api/client.ts` is the single source of truth for th
 - `POST /controls/parameters` - Update quoting parameters
 - `GET /controls/instruments` - List instruments with quoting status
 - `POST /controls/instrument/:symbol/toggle` - Toggle instrument quoting
+- `DELETE /orders/cancel-all` - Cancel all open orders (requires `trade`; the endpoint accepts `underlying`/`expiration`/`side`/`style` filters but the UI calls it unfiltered)
 
 The client also types (but no page calls yet): `GET /health` (served unprefixed, not under `/api/v1`), `GET /stats`, underlying/expiration/strike creation (plus underlying deletion and the single-underlying/single-strike getters), the option-book top summary, per-order add/cancel, `GET …/quote`, and `POST /prices`.
 
@@ -124,7 +125,8 @@ Every route except `/health` and `POST /auth/token` requires a JWT. The console 
 
 Honesty over polish — these are the known gaps, in the UI and in this document:
 
-- **Cancel All Limit Orders / Recalibrate Vol Surface / Reset Defaults** on `/controls` are disabled placeholders — no backend endpoints exist ([#17](https://github.com/joaquinbejar/Option-Chain-OrderBook-FrontEnd/issues/17) tracks cancel-all).
+- **Recalibrate Vol Surface / Reset Defaults** on `/controls` are disabled placeholders — no backend endpoints exist.
+- **Cancel-all does not halt quoting** — with the master switch ACTIVE the engine immediately re-places orders after a cancel-all (the confirm dialog warns about this).
 - **Per-option Greeks, IV, portfolio positions, hedging status, and P&L** are not exposed by the backend; `/depth`, `/risk`, and `/pnl` render `—` placeholders instead of inventing numbers.
 - **`/depth` is point-in-time** — snapshots with timestamps and a Refresh action, not a streaming ladder (the WS `quote` frame carries only top-of-book).
 - **`/executions` is view-scoped and volatile** — fills accumulate only while the view is open, stamped with local receipt time (the frame carries no timestamp); there is no fills-history endpoint.

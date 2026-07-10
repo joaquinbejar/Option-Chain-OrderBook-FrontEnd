@@ -214,3 +214,8 @@ export const authStore = createAuthStore();
 export const isAuthenticated = derived(authStore, ($a) => $a.authenticated);
 /** Admin implies all permissions on the backend. */
 export const isAdmin = derived(authStore, ($a) => $a.permissions.includes('admin'));
+/** Order mutations (place/cancel) need `trade`; admin implies it. */
+export const canTrade = derived(
+	authStore,
+	($a) => $a.permissions.includes('trade') || $a.permissions.includes('admin')
+);

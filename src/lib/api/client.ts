@@ -158,6 +158,29 @@ export const api = {
 			`/underlyings/${underlying}/expirations/${expiration}/strikes/${strike}/options/${style}/quote`
 		),
 
+	/**
+	 * Cancel every open order matching the optional filters (none = all).
+	 * Requires the `trade` permission.
+	 */
+	cancelAllOrders: (filters?: {
+		underlying?: string;
+		expiration?: string;
+		side?: string;
+		style?: 'call' | 'put';
+	}) => {
+		const params = new URLSearchParams();
+		for (const [key, value] of Object.entries(filters ?? {})) {
+			if (value !== undefined) {
+				params.set(key, value);
+			}
+		}
+		const query = params.toString();
+		return fetchApi<{ canceled_count: number; failed_count: number }>(
+			`/orders/cancel-all${query ? `?${query}` : ''}`,
+			{ method: 'DELETE' }
+		);
+	},
+
 	/** Per-level order-book snapshot. `depth`: 'top' (default), a level count, or 'full'. */
 	getOptionSnapshot: (
 		underlying: string,

@@ -3,10 +3,21 @@
 	import { controlsStore } from '$lib/stores/controls';
 	import { systemStore } from '$lib/stores/system';
 	import { marketStore, priceList } from '$lib/stores/market';
-	import { isAdmin } from '$lib/stores/auth';
+	import { isAdmin, canTrade } from '$lib/stores/auth';
 	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 
 	let showHaltConfirm = $state(false);
+	let showCancelAllConfirm = $state(false);
+
+	function handleCancelAll() {
+		if (!$canTrade) return; // order mutations require a trade token
+		showCancelAllConfirm = true;
+	}
+
+	function confirmCancelAll() {
+		showCancelAllConfirm = false;
+		controlsStore.cancelAllOrders();
+	}
 
 	function handleMasterToggle() {
 		if (!$isAdmin) return; // quoting controls require an admin token
@@ -117,7 +128,31 @@
 			class="flex items-center gap-2 bg-warning/10 border border-warning/30 rounded-lg px-4 py-3 text-sm font-medium text-warning"
 		>
 			<span class="material-symbols-outlined text-base" aria-hidden="true">lock</span>
-			Read-only token — the quoting controls below require an admin token.
+			{#if $canTrade}
+				Your token lacks the admin permission — the quoting controls below are disabled. Cancel-all
+				remains available with your trade permission.
+			{:else}
+				Read-only token — the quoting controls and cancel-all below are disabled.
+			{/if}
+		</div>
+	{/if}
+
+	{#if $controlsStore.notice}
+		<div
+			role="status"
+			class="flex items-center justify-between gap-4 bg-success/10 border border-success/30 rounded-lg px-4 py-3"
+		>
+			<span class="flex items-center gap-2 text-sm font-medium text-success">
+				<span class="material-symbols-outlined text-base" aria-hidden="true">check_circle</span>
+				{$controlsStore.notice}
+			</span>
+			<button
+				aria-label="Dismiss notice"
+				onclick={() => controlsStore.clearNotice()}
+				class="text-success hover:text-white transition-colors flex items-center"
+			>
+				<span class="material-symbols-outlined text-base">close</span>
+			</button>
 		</div>
 	{/if}
 
@@ -350,7 +385,7 @@
 				</div>
 			</div>
 
-			<!-- Quick Actions — placeholders until the backend exposes endpoints -->
+			<!-- Quick Actions — cancel-all is live; recalibrate awaits a backend endpoint -->
 			<div class="flex flex-wrap gap-4 mt-2">
 				<button
 					disabled
@@ -361,12 +396,18 @@
 					<span class="text-xs text-text-muted font-normal">(not wired)</span>
 				</button>
 				<button
-					disabled
-					class="flex-1 bg-surface-dark text-white border border-border-dark font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+					onclick={handleCancelAll}
+					disabled={!$canTrade || $controlsStore.cancelingAll}
+					title={$canTrade ? undefined : 'Requires a trade token'}
+					class="flex-1 bg-surface-dark hover:bg-danger/10 text-danger border border-danger/40 font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-surface-dark"
 				>
-					<span class="material-symbols-outlined text-sm">cancel_presentation</span>
-					Cancel All Limit Orders
-					<span class="text-xs text-text-muted font-normal">(not wired — #17)</span>
+					<span
+						class="material-symbols-outlined text-sm {$controlsStore.cancelingAll
+							? 'animate-spin'
+							: ''}"
+						aria-hidden="true">{$controlsStore.cancelingAll ? 'sync' : 'cancel_presentation'}</span
+					>
+					{$controlsStore.cancelingAll ? 'Canceling…' : 'Cancel All Limit Orders'}
 				</button>
 			</div>
 		</div>
@@ -432,4 +473,15 @@
 	confirmLabel="Halt quoting"
 	onconfirm={confirmHalt}
 	oncancel={() => (showHaltConfirm = false)}
+/>
+
+<ConfirmDialog
+	open={showCancelAllConfirm}
+	title="Cancel all open orders?"
+	message={$controlsStore.masterSwitch
+		? 'This cancels every open limit order across all underlyings, expirations, sides, calls and puts. Quoting is ACTIVE and will immediately place new orders — halt quoting first if you want the book to stay empty.'
+		: 'This cancels every open limit order across all underlyings, expirations, sides, calls and puts. Quoting is halted, so no new orders will be placed.'}
+	confirmLabel="Cancel all orders"
+	onconfirm={confirmCancelAll}
+	oncancel={() => (showCancelAllConfirm = false)}
 />
