@@ -68,12 +68,8 @@ describe('controls store — init', () => {
 		expect(s.sizeScalar).toBeCloseTo(80); // size_scalar × 100
 		expect(s.directionalSkew).toBe(0.1);
 		expect(s.instruments).toHaveLength(2);
-		expect(s.instruments[0]).toMatchObject({
-			symbol: 'BTC',
-			isQuotingEnabled: true,
-			currentPrice: 50_000
-		});
-		expect(s.instruments[1].currentPrice).toBeNull();
+		expect(s.instruments[0]).toEqual({ symbol: 'BTC', isQuotingEnabled: true });
+		expect(s.instruments[1]).toEqual({ symbol: 'ETH', isQuotingEnabled: false });
 		expect(s.loading).toBe(false);
 		expect(fakeWs.connect).toHaveBeenCalled();
 	});
@@ -456,11 +452,13 @@ describe('controls store — subscription lifecycle', () => {
 		await initStore();
 		controlsStore.disconnect();
 
-		fakeWs.emit({ type: 'price', data: { symbol: 'BTC', price_cents: 1 } });
+		fakeWs.emit({
+			type: 'config',
+			data: { enabled: false, spread_multiplier: 9, size_scalar: 0.1, directional_skew: 1 }
+		});
 
-		expect(get(controlsStore).instruments.find((i) => i.symbol === 'BTC')?.currentPrice).toBe(
-			50_000
-		);
+		expect(get(controlsStore).masterSwitch).toBe(true); // frame not applied
+		expect(get(controlsStore).spreadMultiplier).toBe(1.5);
 	});
 });
 
@@ -600,13 +598,13 @@ describe('controls store — WebSocket frames', () => {
 		expect(s.directionalSkew).toBe(-0.2);
 	});
 
-	it('a price frame converts cents to dollars for the matching instrument only', async () => {
+	it('a price frame does not rebuild the instruments — prices are marketStore business', async () => {
 		await initStore();
+		const before = get(controlsStore).instruments;
 
 		fakeWs.emit({ type: 'price', data: { symbol: 'BTC', price_cents: 5_100_000 } });
 
-		const s = get(controlsStore);
-		expect(s.instruments.find((i) => i.symbol === 'BTC')?.currentPrice).toBe(51_000);
-		expect(s.instruments.find((i) => i.symbol === 'ETH')?.currentPrice).toBeNull();
+		// Same array reference: no per-tick O(instruments) allocation (issue #38).
+		expect(get(controlsStore).instruments).toBe(before);
 	});
 });
