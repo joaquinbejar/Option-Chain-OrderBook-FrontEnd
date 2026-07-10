@@ -35,6 +35,13 @@ export interface MarketState {
 	quotes: Map<string, QuoteData>;
 	underlyings: string[];
 	expirations: Map<string, string[]>;
+	/**
+	 * Deduped, sorted union of every underlying's expirations. Precomputed
+	 * once when `init()` finishes loading (WS frames never touch expirations),
+	 * so per-tick consumers get a stable reference instead of rebuilding the
+	 * union on every store emit.
+	 */
+	allExpirations: string[];
 	strikes: Map<string, number[]>;
 	connected: boolean;
 }
@@ -47,6 +54,7 @@ function createInitialState(): MarketState {
 		quotes: new Map(),
 		underlyings: [],
 		expirations: new Map(),
+		allExpirations: [],
 		strikes: new Map(),
 		connected: false
 	};
@@ -104,6 +112,13 @@ function createMarketStore() {
 						console.warn(`Failed to load expirations for ${underlying}:`, e);
 					}
 				}
+
+				// Union computed once, here — not in a derived — so high-frequency
+				// consumers are not rebuilding it on every price/quote emit.
+				update((state) => {
+					state.allExpirations = [...new Set([...state.expirations.values()].flat())].sort();
+					return state;
+				});
 			} catch (e) {
 				console.error('Failed to initialize market data:', e);
 			}
