@@ -23,6 +23,35 @@ export interface InstrumentStatus {
 	currentPrice: number | null;
 }
 
+/**
+ * Optional scoping for cancel-all. Omitted fields match everything; the
+ * backend applies each present filter conjunctively (side/style lowercase).
+ */
+export interface CancelAllFilters {
+	underlying?: string;
+	expiration?: string;
+	side?: 'buy' | 'sell';
+	style?: 'call' | 'put';
+}
+
+/**
+ * Human-readable scope suffix (`' matching …'`, or `''` when unscoped).
+ * Shared by the confirm dialog and the outcome banners so the text the
+ * operator authorizes and the text reporting the result cannot drift.
+ */
+export const describeCancelScope = (filters?: CancelAllFilters): string => {
+	const parts = [
+		filters?.side,
+		filters?.style ? `${filters.style}s` : undefined,
+		filters?.underlying ? `on ${filters.underlying}` : undefined,
+		filters?.expiration ? `expiring ${filters.expiration}` : undefined,
+		// An expiration with no underlying spans every product — say so, or
+		// the scope reads narrower than what the backend will cancel.
+		filters?.expiration && !filters?.underlying ? 'across all underlyings' : undefined
+	].filter((p): p is string => Boolean(p));
+	return parts.length > 0 ? ` matching ${parts.join(' ')}` : '';
+};
+
 function createControlsStore() {
 	// Guards the halt/resume round-trip: a second click while the first
 	// request is in flight must not fire a second (possibly opposite) command.
@@ -263,28 +292,41 @@ function createControlsStore() {
 			}
 		},
 		/**
-		 * Cancel every open order (unfiltered). Destructive — the UI confirms
-		 * before calling. Requires the `trade` permission on the backend.
+		 * Cancel every open order matching the optional filters (none = all).
+		 * Destructive — the UI confirms before calling. Requires the `trade`
+		 * permission on the backend.
 		 */
-		cancelAllOrders: async () => {
+		cancelAllOrders: async (filters?: CancelAllFilters) => {
 			if (cancelAllPending) return;
 			cancelAllPending = true;
+			const scope = describeCancelScope(filters);
 			update((s) => ({ ...s, error: null, notice: null, cancelingAll: true }));
 			try {
-				const result = await api.cancelAllOrders();
+				const result = await api.cancelAllOrders(filters);
 				// Any failed cancel means live orders remain — that is an alert,
 				// never a green checkmark.
 				if (result.failed_count > 0) {
 					update((s) => ({
 						...s,
 						cancelingAll: false,
-						error: `Canceled ${result.canceled_count} orders, but ${result.failed_count} FAILED to cancel and are still live.`
+						error: `Canceled ${result.canceled_count} orders${scope}, but ${result.failed_count} FAILED to cancel and are still live.`
+					}));
+				} else if (result.canceled_count === 0) {
+					// Zero matches on a scoped cancel usually means the scope was
+					// wrong (stale expiration, wrong side) — that must not read
+					// like a green "done".
+					update((s) => ({
+						...s,
+						cancelingAll: false,
+						notice: scope
+							? `No open orders${scope} — nothing was canceled.`
+							: 'No open orders to cancel.'
 					}));
 				} else {
 					update((s) => ({
 						...s,
 						cancelingAll: false,
-						notice: `Canceled ${result.canceled_count} open orders.`
+						notice: `Canceled ${result.canceled_count} open orders${scope}.`
 					}));
 				}
 			} catch (e) {
@@ -294,7 +336,11 @@ function createControlsStore() {
 					cancelingAll: false,
 					error: isForbidden(e)
 						? 'Permission denied — canceling orders requires a trade token.'
-						: 'Cancel-all command failed — open orders are unchanged.'
+						: // A 400 carries the backend's validation message (e.g. an
+							// invalid side/style filter) — show it.
+							e instanceof ApiError && e.status === 400
+							? `Cancel-all was rejected: ${e.message}`
+							: 'Cancel-all command failed — open orders are unchanged.'
 				}));
 			} finally {
 				cancelAllPending = false;

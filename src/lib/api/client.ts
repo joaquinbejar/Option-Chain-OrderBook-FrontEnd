@@ -164,11 +164,17 @@ export const api = {
 	/**
 	 * Cancel every open order matching the optional filters (none = all).
 	 * Requires the `trade` permission.
+	 *
+	 * Filter contract (backend `cancel_all_orders`, `src/api/handlers.rs`):
+	 * present filters are applied conjunctively (AND); `side`/`style` must be
+	 * the lowercase literals below (anything else is a 400); `expiration` is
+	 * an exact string match against the value the backend itself returned
+	 * from `GET /underlyings/:u/expirations`.
 	 */
 	cancelAllOrders: (filters?: {
 		underlying?: string;
 		expiration?: string;
-		side?: string;
+		side?: 'buy' | 'sell';
 		style?: 'call' | 'put';
 	}) => {
 		const params = new URLSearchParams();

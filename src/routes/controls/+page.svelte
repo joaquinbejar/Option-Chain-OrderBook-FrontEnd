@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { controlsStore } from '$lib/stores/controls';
+	import { controlsStore, describeCancelScope, type CancelAllFilters } from '$lib/stores/controls';
 	import { systemStore } from '$lib/stores/system';
 	import { marketStore, priceList } from '$lib/stores/market';
 	import { isAdmin, canTrade } from '$lib/stores/auth';
@@ -9,6 +9,40 @@
 	let showHaltConfirm = $state(false);
 	let showCancelAllConfirm = $state(false);
 
+	// Cancel-all scope — 'all' means "no filter on this dimension". The
+	// backend applies present filters conjunctively (DELETE /orders/cancel-all).
+	let cancelUnderlying = $state('all');
+	let cancelExpiration = $state('all');
+	let cancelSide = $state<'all' | 'buy' | 'sell'>('all');
+	let cancelStyle = $state<'all' | 'call' | 'put'>('all');
+
+	// Expirations offered for the chosen underlying; the store's precomputed
+	// union (stable reference — market emits per price tick) when none is.
+	const cancelExpirations = $derived(
+		cancelUnderlying === 'all'
+			? $marketStore.allExpirations
+			: ($marketStore.expirations.get(cancelUnderlying) ?? [])
+	);
+
+	const cancelFilters = $derived.by(() => {
+		const filters: CancelAllFilters = {};
+		if (cancelUnderlying !== 'all') filters.underlying = cancelUnderlying;
+		if (cancelExpiration !== 'all') filters.expiration = cancelExpiration;
+		if (cancelSide !== 'all') filters.side = cancelSide;
+		if (cancelStyle !== 'all') filters.style = cancelStyle;
+		return filters;
+	});
+	const cancelScoped = $derived(Object.keys(cancelFilters).length > 0);
+
+	// What the confirm dialog says it will cancel — the SAME formatter the
+	// store uses for the outcome banners, so authorization and result text
+	// cannot drift.
+	const cancelScopeLabel = $derived(
+		cancelScoped
+			? `every open limit order${describeCancelScope(cancelFilters)}`
+			: 'every open limit order across all underlyings, expirations, sides, calls and puts'
+	);
+
 	function handleCancelAll() {
 		if (!$canTrade) return; // order mutations require a trade token
 		showCancelAllConfirm = true;
@@ -16,7 +50,14 @@
 
 	function confirmCancelAll() {
 		showCancelAllConfirm = false;
-		controlsStore.cancelAllOrders();
+		controlsStore.cancelAllOrders(cancelFilters);
+	}
+
+	function handleCancelUnderlyingChange(e: Event) {
+		cancelUnderlying = (e.target as HTMLSelectElement).value;
+		// The old expiration may not exist under the new underlying — reset
+		// rather than silently sending a filter that matches nothing.
+		cancelExpiration = 'all';
 	}
 
 	function handleMasterToggle() {
@@ -386,29 +427,103 @@
 			</div>
 
 			<!-- Quick Actions — cancel-all is live; recalibrate awaits a backend endpoint -->
-			<div class="flex flex-wrap gap-4 mt-2">
-				<button
-					disabled
-					class="flex-1 bg-surface-dark text-white border border-border-dark font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-				>
-					<span class="material-symbols-outlined text-sm">replay</span>
-					Recalibrate Vol Surface
-					<span class="text-xs text-text-muted font-normal">(not wired)</span>
-				</button>
-				<button
-					onclick={handleCancelAll}
-					disabled={!$canTrade || $controlsStore.cancelingAll}
-					title={$canTrade ? undefined : 'Requires a trade token'}
-					class="flex-1 bg-surface-dark hover:bg-danger/10 text-danger border border-danger/40 font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-surface-dark"
-				>
-					<span
-						class="material-symbols-outlined text-sm {$controlsStore.cancelingAll
-							? 'animate-spin'
-							: ''}"
-						aria-hidden="true">{$controlsStore.cancelingAll ? 'sync' : 'cancel_presentation'}</span
+			<div class="flex flex-col gap-3 mt-2">
+				<div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+					<div class="flex flex-col gap-1">
+						<label for="cancel-underlying" class="text-xs font-bold text-slate-400 uppercase"
+							>Underlying</label
+						>
+						<select
+							id="cancel-underlying"
+							disabled={!$canTrade || $controlsStore.cancelingAll}
+							title={$canTrade ? undefined : 'Requires a trade token'}
+							value={cancelUnderlying}
+							onchange={handleCancelUnderlyingChange}
+							class="bg-background-dark border border-border-dark rounded-lg px-2 py-2 text-sm text-white disabled:opacity-50 disabled:cursor-not-allowed"
+						>
+							<option value="all">All</option>
+							{#each $marketStore.underlyings as symbol (symbol)}
+								<option value={symbol}>{symbol}</option>
+							{/each}
+						</select>
+					</div>
+					<div class="flex flex-col gap-1">
+						<label for="cancel-expiration" class="text-xs font-bold text-slate-400 uppercase"
+							>Expiration</label
+						>
+						<select
+							id="cancel-expiration"
+							disabled={!$canTrade || $controlsStore.cancelingAll}
+							title={$canTrade ? undefined : 'Requires a trade token'}
+							bind:value={cancelExpiration}
+							class="bg-background-dark border border-border-dark rounded-lg px-2 py-2 text-sm text-white disabled:opacity-50 disabled:cursor-not-allowed"
+						>
+							<option value="all">All</option>
+							{#each cancelExpirations as expiration (expiration)}
+								<option value={expiration}>{expiration}</option>
+							{/each}
+						</select>
+					</div>
+					<div class="flex flex-col gap-1">
+						<label for="cancel-side" class="text-xs font-bold text-slate-400 uppercase">Side</label>
+						<select
+							id="cancel-side"
+							disabled={!$canTrade || $controlsStore.cancelingAll}
+							title={$canTrade ? undefined : 'Requires a trade token'}
+							bind:value={cancelSide}
+							class="bg-background-dark border border-border-dark rounded-lg px-2 py-2 text-sm text-white disabled:opacity-50 disabled:cursor-not-allowed"
+						>
+							<option value="all">All</option>
+							<option value="buy">Buy</option>
+							<option value="sell">Sell</option>
+						</select>
+					</div>
+					<div class="flex flex-col gap-1">
+						<label for="cancel-style" class="text-xs font-bold text-slate-400 uppercase"
+							>Style</label
+						>
+						<select
+							id="cancel-style"
+							disabled={!$canTrade || $controlsStore.cancelingAll}
+							title={$canTrade ? undefined : 'Requires a trade token'}
+							bind:value={cancelStyle}
+							class="bg-background-dark border border-border-dark rounded-lg px-2 py-2 text-sm text-white disabled:opacity-50 disabled:cursor-not-allowed"
+						>
+							<option value="all">All</option>
+							<option value="call">Calls</option>
+							<option value="put">Puts</option>
+						</select>
+					</div>
+				</div>
+				<div class="flex flex-wrap gap-4">
+					<button
+						disabled
+						class="flex-1 bg-surface-dark text-white border border-border-dark font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
 					>
-					{$controlsStore.cancelingAll ? 'Canceling…' : 'Cancel All Limit Orders'}
-				</button>
+						<span class="material-symbols-outlined text-sm">replay</span>
+						Recalibrate Vol Surface
+						<span class="text-xs text-text-muted font-normal">(not wired)</span>
+					</button>
+					<button
+						onclick={handleCancelAll}
+						disabled={!$canTrade || $controlsStore.cancelingAll}
+						title={$canTrade ? undefined : 'Requires a trade token'}
+						class="flex-1 bg-surface-dark hover:bg-danger/10 text-danger border border-danger/40 font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-surface-dark"
+					>
+						<span
+							class="material-symbols-outlined text-sm {$controlsStore.cancelingAll
+								? 'animate-spin'
+								: ''}"
+							aria-hidden="true"
+							>{$controlsStore.cancelingAll ? 'sync' : 'cancel_presentation'}</span
+						>
+						{$controlsStore.cancelingAll
+							? 'Canceling…'
+							: cancelScoped
+								? 'Cancel Matching Limit Orders'
+								: 'Cancel All Limit Orders'}
+					</button>
+				</div>
 			</div>
 		</div>
 
@@ -477,11 +592,11 @@
 
 <ConfirmDialog
 	open={showCancelAllConfirm}
-	title="Cancel all open orders?"
+	title={cancelScoped ? 'Cancel matching open orders?' : 'Cancel all open orders?'}
 	message={$controlsStore.masterSwitch
-		? 'This cancels every open limit order across all underlyings, expirations, sides, calls and puts. Quoting is ACTIVE and will immediately place new orders — halt quoting first if you want the book to stay empty.'
-		: 'This cancels every open limit order across all underlyings, expirations, sides, calls and puts. Quoting is halted, so no new orders will be placed.'}
-	confirmLabel="Cancel all orders"
+		? `This cancels ${cancelScopeLabel}. Quoting is ACTIVE and will immediately place new orders — halt quoting first if you want the book to stay empty.`
+		: `This cancels ${cancelScopeLabel}. Quoting is halted, so no new orders will be placed.`}
+	confirmLabel={cancelScoped ? 'Cancel matching orders' : 'Cancel all orders'}
 	onconfirm={confirmCancelAll}
 	oncancel={() => (showCancelAllConfirm = false)}
 />

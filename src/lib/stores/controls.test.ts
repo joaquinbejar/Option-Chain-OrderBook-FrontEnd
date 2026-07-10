@@ -498,6 +498,74 @@ describe('controls store — cancel all orders', () => {
 		expect(get(controlsStore).notice).toBeNull();
 	});
 
+	it('passes scope filters through to the API and names the scope in the notice', async () => {
+		await initStore();
+		vi.mocked(api.cancelAllOrders).mockResolvedValue({ canceled_count: 4, failed_count: 0 });
+
+		await controlsStore.cancelAllOrders({
+			underlying: 'BTC',
+			expiration: '20260821',
+			side: 'buy',
+			style: 'call'
+		});
+
+		// The filters reach the wire untouched — the backend applies them.
+		expect(api.cancelAllOrders).toHaveBeenCalledWith({
+			underlying: 'BTC',
+			expiration: '20260821',
+			side: 'buy',
+			style: 'call'
+		});
+		expect(get(controlsStore).notice).toBe(
+			'Canceled 4 open orders matching buy calls on BTC expiring 20260821.'
+		);
+	});
+
+	it('an empty filter object stays an unscoped cancel-all', async () => {
+		await initStore();
+		vi.mocked(api.cancelAllOrders).mockResolvedValue({ canceled_count: 7, failed_count: 0 });
+
+		await controlsStore.cancelAllOrders({});
+
+		expect(get(controlsStore).notice).toBe('Canceled 7 open orders.');
+	});
+
+	it('a zero-match scoped cancel is reported as a no-match, not a success', async () => {
+		await initStore();
+		vi.mocked(api.cancelAllOrders).mockResolvedValue({ canceled_count: 0, failed_count: 0 });
+
+		// Expiration with no underlying spans every product — the scope text
+		// must say so (it is what the operator authorized).
+		await controlsStore.cancelAllOrders({ expiration: '20260821' });
+
+		expect(get(controlsStore).notice).toBe(
+			'No open orders matching expiring 20260821 across all underlyings — nothing was canceled.'
+		);
+		expect(get(controlsStore).error).toBeNull();
+	});
+
+	it('a zero-match unscoped cancel says the book was already clear', async () => {
+		await initStore();
+		vi.mocked(api.cancelAllOrders).mockResolvedValue({ canceled_count: 0, failed_count: 0 });
+
+		await controlsStore.cancelAllOrders();
+
+		expect(get(controlsStore).notice).toBe('No open orders to cancel.');
+	});
+
+	it('an invalid-filter 400 surfaces the backend message', async () => {
+		await initStore();
+		vi.mocked(api.cancelAllOrders).mockRejectedValue(
+			new ApiError("Invalid side: middle. Use 'buy' or 'sell'", 400)
+		);
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+
+		await controlsStore.cancelAllOrders({ side: 'buy' });
+
+		expect(get(controlsStore).error).toMatch(/Invalid side: middle/);
+		expect(get(controlsStore).notice).toBeNull();
+	});
+
 	it('ignores a second click while the first command is in flight', async () => {
 		await initStore();
 		let resolveCancel!: (v: { canceled_count: number; failed_count: number }) => void;
