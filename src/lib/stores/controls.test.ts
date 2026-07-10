@@ -18,7 +18,8 @@ vi.mock('$lib/api/client', async (importOriginal) => {
 			killSwitch: vi.fn(),
 			enableQuoting: vi.fn(),
 			updateParameters: vi.fn(),
-			toggleInstrument: vi.fn()
+			toggleInstrument: vi.fn(),
+			cancelAllOrders: vi.fn()
 		}
 	};
 });
@@ -443,6 +444,58 @@ describe('controls store — subscription lifecycle', () => {
 		expect(get(controlsStore).instruments.find((i) => i.symbol === 'BTC')?.currentPrice).toBe(
 			50_000
 		);
+	});
+});
+
+describe('controls store — cancel all orders', () => {
+	it('reports the canceled and failed counts as a notice', async () => {
+		await initStore();
+		vi.mocked(api.cancelAllOrders).mockResolvedValue({ canceled_count: 12, failed_count: 0 });
+
+		await controlsStore.cancelAllOrders();
+
+		expect(api.cancelAllOrders).toHaveBeenCalledOnce();
+		expect(get(controlsStore).notice).toBe('Canceled 12 open orders.');
+		expect(get(controlsStore).error).toBeNull();
+	});
+
+	it('a partial failure is an alert, never a green notice — orders are still live', async () => {
+		await initStore();
+		vi.mocked(api.cancelAllOrders).mockResolvedValue({ canceled_count: 10, failed_count: 2 });
+
+		await controlsStore.cancelAllOrders();
+
+		const s = get(controlsStore);
+		expect(s.notice).toBeNull();
+		expect(s.error).toMatch(/2 FAILED to cancel and are still live/);
+	});
+
+	it('a 403 is a trade-permission denial, not a transient failure', async () => {
+		await initStore();
+		vi.mocked(api.cancelAllOrders).mockRejectedValue(new ApiError('Forbidden', 403));
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+
+		await controlsStore.cancelAllOrders();
+
+		expect(get(controlsStore).error).toMatch(/trade token/);
+		expect(get(controlsStore).notice).toBeNull();
+	});
+
+	it('ignores a second click while the first command is in flight', async () => {
+		await initStore();
+		let resolveCancel!: (v: { canceled_count: number; failed_count: number }) => void;
+		vi.mocked(api.cancelAllOrders).mockReturnValue(
+			new Promise((resolve) => {
+				resolveCancel = resolve;
+			})
+		);
+
+		const first = controlsStore.cancelAllOrders();
+		const second = controlsStore.cancelAllOrders(); // double-fire
+		resolveCancel({ canceled_count: 3, failed_count: 0 });
+		await Promise.all([first, second]);
+
+		expect(api.cancelAllOrders).toHaveBeenCalledOnce();
 	});
 });
 

@@ -11,6 +11,10 @@ export interface ControlsState {
 	loading: boolean;
 	/** Last command failure, user-visible; null when everything is confirmed. */
 	error: string | null;
+	/** Non-error command outcome worth showing (e.g. cancel-all counts). */
+	notice: string | null;
+	/** True while a cancel-all command is in flight. */
+	cancelingAll: boolean;
 }
 
 export interface InstrumentStatus {
@@ -23,6 +27,8 @@ function createControlsStore() {
 	// Guards the halt/resume round-trip: a second click while the first
 	// request is in flight must not fire a second (possibly opposite) command.
 	let switchPending = false;
+	// Same guard for cancel-all — one confirmed click, one command.
+	let cancelAllPending = false;
 
 	// A 403 is a permission denial, not a transient failure — say so, or the
 	// operator retries a command their token can never execute.
@@ -35,7 +41,9 @@ function createControlsStore() {
 		directionalSkew: 0,
 		instruments: [],
 		loading: true,
-		error: null
+		error: null,
+		notice: null,
+		cancelingAll: false
 	});
 
 	type ParamField = 'spreadMultiplier' | 'sizeScalar' | 'directionalSkew';
@@ -243,7 +251,46 @@ function createControlsStore() {
 				}));
 			}
 		},
+		/**
+		 * Cancel every open order (unfiltered). Destructive — the UI confirms
+		 * before calling. Requires the `trade` permission on the backend.
+		 */
+		cancelAllOrders: async () => {
+			if (cancelAllPending) return;
+			cancelAllPending = true;
+			update((s) => ({ ...s, error: null, notice: null, cancelingAll: true }));
+			try {
+				const result = await api.cancelAllOrders();
+				// Any failed cancel means live orders remain — that is an alert,
+				// never a green checkmark.
+				if (result.failed_count > 0) {
+					update((s) => ({
+						...s,
+						cancelingAll: false,
+						error: `Canceled ${result.canceled_count} orders, but ${result.failed_count} FAILED to cancel and are still live.`
+					}));
+				} else {
+					update((s) => ({
+						...s,
+						cancelingAll: false,
+						notice: `Canceled ${result.canceled_count} open orders.`
+					}));
+				}
+			} catch (e) {
+				console.error('Failed to cancel all orders:', e);
+				update((s) => ({
+					...s,
+					cancelingAll: false,
+					error: isForbidden(e)
+						? 'Permission denied — canceling orders requires a trade token.'
+						: 'Cancel-all command failed — open orders are unchanged.'
+				}));
+			} finally {
+				cancelAllPending = false;
+			}
+		},
 		clearError: () => update((s) => ({ ...s, error: null })),
+		clearNotice: () => update((s) => ({ ...s, notice: null })),
 		/** Drop this store's WS subscription (the shared socket stays open). */
 		disconnect: () => {
 			initGeneration++; // an in-flight init must not land after teardown
@@ -251,6 +298,8 @@ function createControlsStore() {
 				wsUnsubscribe();
 				wsUnsubscribe = null;
 			}
+			// Stale banners must not survive into the next session/visit.
+			update((s) => ({ ...s, error: null, notice: null }));
 		},
 		reset: () =>
 			set({
@@ -260,7 +309,9 @@ function createControlsStore() {
 				directionalSkew: 0,
 				instruments: [],
 				loading: true,
-				error: null
+				error: null,
+				notice: null,
+				cancelingAll: false
 			})
 	};
 }
