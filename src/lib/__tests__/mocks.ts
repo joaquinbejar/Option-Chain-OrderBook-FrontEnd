@@ -12,6 +12,11 @@ export function makeFakeWsClient() {
 		connect: vi.fn(),
 		disconnect: vi.fn(),
 		send: vi.fn(),
+		subscribeOrderbook: vi.fn(),
+		unsubscribeOrderbook: vi.fn(),
+		subscribeTrades: vi.fn(),
+		unsubscribeTrades: vi.fn(),
+		resyncOrderbook: vi.fn(),
 		get isConnected() {
 			return connected;
 		},

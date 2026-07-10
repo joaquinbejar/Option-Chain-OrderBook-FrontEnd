@@ -12,7 +12,7 @@ Re-add fresh captures against a live backend once the honest pages settle.
 
 - **Operational Controls** (`/controls`) - Master quoting switch (confirm-guarded, admin-only), global parameters with optimistic-update reconcile, instrument toggles, cancel-all open orders with optional underlying/expiration/side/style scoping (confirm-guarded, trade permission), live underlying prices
 - **Quote Matrix** (`/quotes`) - Live call/put quotes aligned by strike, streamed over the WebSocket; empty book sides render `—`
-- **Order Book Depth** (`/depth`) - Call/Put pair order book depth from point-in-time backend snapshots (per-option Greeks and IV are not yet provided by the backend and render as `—`)
+- **Order Book Depth** (`/depth`) - Live Call/Put pair order books streamed over WS (per-instrument `orderbook_snapshot` + `orderbook_delta`, sequence-checked with automatic resync) plus a real-time trades tape (per-option Greeks and IV are not yet provided by the backend and render as `—`)
 - **Risk Commander** (`/risk`) - Layout for portfolio Greeks / inventory / hedging; the backend does not expose positions or hedging yet, so every widget shows an honest placeholder
 - **Execution Monitor** (`/executions`) - Live session fills streamed over the WebSocket `fill` frames (empty until the engine trades; no fills history endpoint yet)
 - **P&L Decomposition** (`/pnl`) - Layout for attribution by theta, delta, vega and spread capture; P&L is not exposed by the backend yet, so the page shows honest placeholders
@@ -78,7 +78,7 @@ src/
 │       ├── auth.ts         # JWT session (permissions, expiry, storage)
 │       ├── controls.ts     # Quoting controls state (halt/resume, parameters)
 │       ├── market.ts       # Prices, quotes, underlyings, expirations, strikes
-│       ├── depth.ts        # Per-level order-book snapshots for /depth
+│       ├── depth.ts        # Live per-level order books + trades tape for /depth
 │       ├── executions.ts   # Live WS fills for /executions
 │       └── system.ts       # Connection, latency + staleness, heartbeat
 ├── routes/
@@ -103,7 +103,6 @@ The typed client in `src/lib/api/client.ts` is the single source of truth for th
 - `GET /underlyings` - List underlyings
 - `GET /underlyings/:symbol/expirations` - List expirations
 - `GET /underlyings/:symbol/expirations/:exp/strikes` - List strikes (values are integer cents)
-- `GET /underlyings/:symbol/expirations/:exp/strikes/:strike/options/:style/snapshot?depth=N` - Per-level order-book snapshot (prices in integer cents)
 - `GET /prices` / `GET /prices/:symbol` - Underlying prices (dollars — the one dollar-denominated surface)
 - `GET /controls` - Current quoting controls
 - `POST /controls/kill-switch` - Emergency kill switch
@@ -113,9 +112,9 @@ The typed client in `src/lib/api/client.ts` is the single source of truth for th
 - `POST /controls/instrument/:symbol/toggle` - Toggle instrument quoting
 - `DELETE /orders/cancel-all` - Cancel all open orders (requires `trade`); the `/controls` Danger Zone can scope it with the optional `underlying`/`expiration`/`side`/`style` filters
 
-The client also types (but no page calls yet): `GET /health` (served unprefixed, not under `/api/v1`), `GET /stats`, underlying/expiration/strike creation (plus underlying deletion and the single-underlying/single-strike getters), the option-book top summary, per-order add/cancel, `GET …/quote`, and `POST /prices`.
+The client also types (but no page calls yet): `GET /health` (served unprefixed, not under `/api/v1`), `GET /stats`, underlying/expiration/strike creation (plus underlying deletion and the single-underlying/single-strike getters), the option-book top summary, the per-level REST snapshot (`…/options/:style/snapshot?depth=N` — `/depth` now streams over WS instead), per-order add/cancel, `GET …/quote`, and `POST /prices`.
 
-A WebSocket at `/ws` pushes real-time frames (`quote`, `price`, `fill`, `config`, `connected`, `heartbeat`); option prices on the wire are integer cents. `/executions` is fed entirely by the `fill` frames.
+A WebSocket at `/ws` pushes real-time frames (`quote`, `price`, `fill`, `config`, `connected`, `heartbeat`), plus — per `orderbook` / `trades` channel subscription — `orderbook_snapshot`, `orderbook_delta` (the resulting quantity per changed level; `0` removes it) and `trade`; option prices on the wire are integer cents. `/executions` is fed entirely by the `fill` frames; `/depth` subscribes both legs of the selected pair and reconciles deltas against the snapshot by sequence, re-subscribing on any gap (a re-subscribe yields a fresh snapshot — the same mechanism used after a reconnect).
 
 ### Authentication
 
@@ -128,7 +127,7 @@ Honesty over polish — these are the known gaps, in the UI and in this document
 - **Recalibrate Vol Surface / Reset Defaults** on `/controls` are disabled placeholders — no backend endpoints exist.
 - **Cancel-all does not halt quoting** — with the master switch ACTIVE the engine immediately re-places orders after a cancel-all (the confirm dialog warns about this).
 - **Per-option Greeks, IV, portfolio positions, hedging status, and P&L** are not exposed by the backend; `/depth`, `/risk`, and `/pnl` render `—` placeholders instead of inventing numbers.
-- **`/depth` is point-in-time** — snapshots with timestamps and a Refresh action, not a streaming ladder (the WS `quote` frame carries only top-of-book).
+- **`/depth` deltas cover user-driven mutations** — the market-maker requote loop intentionally does not emit per-quote `orderbook_delta` frames (its quotes arrive as `quote`, its fills as `fill`); the Resync action re-requests fresh snapshots for both legs.
 - **`/executions` is view-scoped and volatile** — fills accumulate only while the view is open, stamped with local receipt time (the frame carries no timestamp); there is no fills-history endpoint.
 - **Auth**: the JWT travels in the WS URL query (proxy logs see it — use short TTLs), `sessionStorage` is XSS-readable, there is no idle-timeout logout and no silent token refresh.
 - **Screenshots** were removed — the old captures showed fabricated data; fresh ones should be taken against a live backend.
