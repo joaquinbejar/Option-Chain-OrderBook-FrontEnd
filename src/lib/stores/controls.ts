@@ -98,9 +98,6 @@ function createControlsStore() {
 		} catch (e) {
 			if (generation !== paramGeneration[field]) return; // superseded by a newer tick
 			console.error(`Failed to update ${label}:`, e);
-			// A 400 carries the backend's validation message (the allowed
-			// range) — show it, not a generic failure line.
-			const rejected = e instanceof ApiError && e.status === 400;
 			// The snapshot may itself be an optimistic value from an earlier
 			// in-flight tick; the periodic WS config broadcast reconciles any
 			// residual drift to backend truth.
@@ -109,8 +106,10 @@ function createControlsStore() {
 				[field]: previous,
 				error: isForbidden(e)
 					? `Permission denied — changing the ${label} requires an admin token.`
-					: rejected
-						? `The ${label} was rejected: ${(e as ApiError).message}`
+					: // A 400 carries the backend's validation message (the
+						// allowed range) — show it, not a generic failure line.
+						e instanceof ApiError && e.status === 400
+						? `The ${label} was rejected: ${e.message}`
 						: `Failed to update the ${label} — the change was not applied.`
 			}));
 		}
