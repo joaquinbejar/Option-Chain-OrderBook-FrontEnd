@@ -48,6 +48,14 @@ function createControlsStore() {
 
 	type ParamField = 'spreadMultiplier' | 'sizeScalar' | 'directionalSkew';
 
+	// size_scalar is a FRACTION in [0, 1] on every wire path (backend #82);
+	// the store/UI speak percent [0, 100]. Convert here, at the store's wire
+	// boundary, and nowhere else. The ×100 is rounded to 2-decimal percents so
+	// float noise (0.8 × 100 = 80.00000000000001) never reaches the UI and a
+	// value read from the backend writes back as the same fraction.
+	const toPercent = (fraction: number): number => Math.round(fraction * 10_000) / 100;
+	const toFraction = (percent: number): number => percent / 100;
+
 	// Per-field request generation: a slider drag fires one request per input
 	// tick, and responses may resolve out of order. Only the latest request
 	// for a field may write back — stale echoes/failures are ignored, so the
@@ -67,7 +75,7 @@ function createControlsStore() {
 	const applyParameter = async (
 		field: ParamField,
 		value: number,
-		request: { spreadMultiplier?: number; sizeScalar?: number; directionalSkew?: number },
+		request: { spread_multiplier?: number; size_scalar?: number; directional_skew?: number },
 		label: string
 	) => {
 		const generation = ++paramGeneration[field];
@@ -82,8 +90,8 @@ function createControlsStore() {
 			if (generation !== paramGeneration[field]) return; // superseded by a newer tick
 			const echo: Record<ParamField, number> = {
 				spreadMultiplier: result.spread_multiplier,
-				// The POST response echoes size_scalar as a percent (×100).
-				sizeScalar: result.size_scalar,
+				// The POST response echoes size_scalar as a fraction, like GET.
+				sizeScalar: toPercent(result.size_scalar),
 				directionalSkew: result.directional_skew
 			};
 			update((s) => ({ ...s, [field]: echo[field] }));
@@ -98,7 +106,11 @@ function createControlsStore() {
 				[field]: previous,
 				error: isForbidden(e)
 					? `Permission denied — changing the ${label} requires an admin token.`
-					: `Failed to update the ${label} — the change was not applied.`
+					: // A 400 carries the backend's validation message (the
+						// allowed range) — show it, not a generic failure line.
+						e instanceof ApiError && e.status === 400
+						? `The ${label} was rejected: ${e.message}`
+						: `Failed to update the ${label} — the change was not applied.`
 			}));
 		}
 	};
@@ -115,9 +127,8 @@ function createControlsStore() {
 				...s,
 				masterSwitch: msg.data.enabled,
 				spreadMultiplier: msg.data.spread_multiplier,
-				// Backend reads expose size_scalar as a fraction [0, 1]; the UI
-				// (and the write API) speak percent [0, 100].
-				sizeScalar: msg.data.size_scalar * 100,
+				// Fraction [0, 1] on the wire → percent [0, 100] in the store/UI.
+				sizeScalar: toPercent(msg.data.size_scalar),
 				directionalSkew: msg.data.directional_skew
 			}));
 		} else if (msg.type === 'price') {
@@ -156,8 +167,8 @@ function createControlsStore() {
 					...s,
 					masterSwitch: controls.master_enabled,
 					spreadMultiplier: controls.spread_multiplier,
-					// Fraction [0, 1] on read → percent [0, 100] in the store/UI.
-					sizeScalar: controls.size_scalar * 100,
+					// Fraction [0, 1] on the wire → percent [0, 100] in the store/UI.
+					sizeScalar: toPercent(controls.size_scalar),
 					directionalSkew: controls.directional_skew,
 					// Only what the backend actually sends — no invented metadata.
 					instruments: instrumentsResp.instruments.map((i) => ({
@@ -225,12 +236,12 @@ function createControlsStore() {
 			}
 		},
 		setSpreadMultiplier: (value: number) =>
-			applyParameter('spreadMultiplier', value, { spreadMultiplier: value }, 'spread multiplier'),
-		// The write API expects percent [0, 100] — no conversion here.
+			applyParameter('spreadMultiplier', value, { spread_multiplier: value }, 'spread multiplier'),
+		// `value` is a percent (the UI slider); the wire takes the fraction.
 		setSizeScalar: (value: number) =>
-			applyParameter('sizeScalar', value, { sizeScalar: value }, 'size scalar'),
+			applyParameter('sizeScalar', value, { size_scalar: toFraction(value) }, 'size scalar'),
 		setDirectionalSkew: (value: number) =>
-			applyParameter('directionalSkew', value, { directionalSkew: value }, 'directional skew'),
+			applyParameter('directionalSkew', value, { directional_skew: value }, 'directional skew'),
 		toggleInstrument: async (symbol: string) => {
 			update((s) => ({ ...s, error: null }));
 			try {

@@ -8,9 +8,10 @@
  * - The `/prices` endpoints are the exception: underlying prices are DOLLARS
  *   (floats) on GET and on the POST request; only the POST response echoes
  *   `price_cents`.
- * - `size_scalar` is asymmetric on the backend: GET `/controls` (and the WS
- *   `config` frame) return a FRACTION in [0, 1], while POST
- *   `/controls/parameters` expects a PERCENT in [0, 100].
+ * - `size_scalar` is a FRACTION in [0, 1] on every wire path — GET
+ *   `/controls`, POST `/controls/parameters` (request and echo), and the WS
+ *   `config` frame (backend #82). The UI displays a percent; the store
+ *   converts at its boundary.
  *
  * Auth: every route except `/health` and `POST /auth/token` requires
  * `Authorization: Bearer <jwt>`. Permissions are JWT claims (`read`, `trade`,
@@ -48,8 +49,10 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit, base = API_B
 		if (response.status === 401 && endpoint !== '/auth/token') {
 			notifyUnauthorized();
 		}
-		const error = await response.json().catch(() => ({ message: 'Unknown error' }));
-		throw new ApiError(error.message || `HTTP ${response.status}`, response.status);
+		const body = await response.json().catch(() => null);
+		// The backend's error envelope is `{ "error": "...", "code": "..." }`;
+		// `message` is kept as a fallback for any non-envelope response.
+		throw new ApiError(body?.error || body?.message || `HTTP ${response.status}`, response.status);
 	}
 
 	return response.json();
@@ -198,7 +201,7 @@ export const api = {
 		fetchApi<{
 			master_enabled: boolean;
 			spread_multiplier: number;
-			/** FRACTION in [0, 1] on read — the write side takes a percent. */
+			/** FRACTION in [0, 1] — the same form the write side takes. */
 			size_scalar: number;
 			directional_skew: number;
 		}>('/controls'),
@@ -213,11 +216,13 @@ export const api = {
 		fetchApi<{ success: boolean; message: string; master_enabled: boolean }>('/controls/enable', {
 			method: 'POST'
 		}),
+	// Wire names are snake_case (backend #81) — the old camelCase keys are
+	// silently ignored by the backend, turning the update into a no-op.
 	updateParameters: (params: {
-		spreadMultiplier?: number;
-		/** PERCENT in [0, 100] on write — the backend divides by 100. */
-		sizeScalar?: number;
-		directionalSkew?: number;
+		spread_multiplier?: number;
+		/** FRACTION in [0, 1] on write, same as the GET/echo form (backend #82). */
+		size_scalar?: number;
+		directional_skew?: number;
 	}) =>
 		fetchApi<{
 			success: boolean;
