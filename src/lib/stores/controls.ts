@@ -20,7 +20,6 @@ export interface ControlsState {
 export interface InstrumentStatus {
 	symbol: string;
 	isQuotingEnabled: boolean;
-	currentPrice: number | null;
 }
 
 /**
@@ -150,6 +149,9 @@ function createControlsStore() {
 	// response from a previous session must not overwrite the fresh one.
 	let initGeneration = 0;
 
+	// Only the config frame matters here. Prices are marketStore's domain —
+	// rebuilding `instruments` per price tick maintained a `currentPrice`
+	// nothing rendered (issue #38), an O(instruments) allocation per frame.
 	const handleWsMessage = (msg: WsMessage) => {
 		if (msg.type === 'config') {
 			update((s) => ({
@@ -159,13 +161,6 @@ function createControlsStore() {
 				// Fraction [0, 1] on the wire → percent [0, 100] in the store/UI.
 				sizeScalar: toPercent(msg.data.size_scalar),
 				directionalSkew: msg.data.directional_skew
-			}));
-		} else if (msg.type === 'price') {
-			update((s) => ({
-				...s,
-				instruments: s.instruments.map((i) =>
-					i.symbol === msg.data.symbol ? { ...i, currentPrice: msg.data.price_cents / 100 } : i
-				)
 			}));
 		}
 	};
@@ -200,10 +195,11 @@ function createControlsStore() {
 					sizeScalar: toPercent(controls.size_scalar),
 					directionalSkew: controls.directional_skew,
 					// Only what the backend actually sends — no invented metadata.
+					// (current_price stays on the wire type; the underlying price
+					// the UI shows comes from marketStore.)
 					instruments: instrumentsResp.instruments.map((i) => ({
 						symbol: i.symbol,
-						isQuotingEnabled: i.quoting_enabled,
-						currentPrice: i.current_price
+						isQuotingEnabled: i.quoting_enabled
 					})),
 					loading: false
 				}));
