@@ -211,3 +211,73 @@ describe('WebSocketClient — messaging', () => {
 		expect(ws.sent).toEqual([JSON.stringify({ action: 'subscribe', symbol: 'BTC', value: 1 })]);
 	});
 });
+
+describe('WebSocketClient — channel subscriptions', () => {
+	const SYMBOL = 'BTC-20261218-5000000-C';
+
+	it('subscribeOrderbook and subscribeTrades send the backend command shape', () => {
+		const client = new WebSocketClient('ws://test/ws');
+		client.connect();
+		lastSocket().open();
+
+		client.subscribeOrderbook(SYMBOL, 10);
+		client.subscribeTrades(SYMBOL);
+
+		expect(lastSocket().sent).toEqual([
+			JSON.stringify({ action: 'subscribe', channel: 'orderbook', symbol: SYMBOL, depth: 10 }),
+			JSON.stringify({ action: 'subscribe', channel: 'trades', symbol: SYMBOL })
+		]);
+	});
+
+	it('replays tracked subscriptions on reconnect — the post-drop resync', () => {
+		const client = new WebSocketClient('ws://test/ws');
+		client.connect();
+		lastSocket().open();
+		client.subscribeOrderbook(SYMBOL, 10);
+		client.subscribeTrades(SYMBOL);
+
+		lastSocket().drop();
+		vi.runOnlyPendingTimers(); // backoff elapses, new socket dials
+		const reconnected = lastSocket();
+		reconnected.open();
+
+		expect(reconnected.sent).toEqual([
+			JSON.stringify({ action: 'subscribe', channel: 'orderbook', symbol: SYMBOL, depth: 10 }),
+			JSON.stringify({ action: 'subscribe', channel: 'trades', symbol: SYMBOL })
+		]);
+	});
+
+	it('an unsubscribed symbol is not replayed and sends the unsubscribe command', () => {
+		const client = new WebSocketClient('ws://test/ws');
+		client.connect();
+		lastSocket().open();
+		client.subscribeOrderbook(SYMBOL, 10);
+		client.unsubscribeOrderbook(SYMBOL);
+
+		expect(lastSocket().sent.at(-1)).toBe(
+			JSON.stringify({ action: 'unsubscribe', channel: 'orderbook', symbol: SYMBOL })
+		);
+
+		lastSocket().drop();
+		vi.runOnlyPendingTimers();
+		const reconnected = lastSocket();
+		reconnected.open();
+		expect(reconnected.sent).toEqual([]); // nothing left to replay
+	});
+
+	it('resyncOrderbook re-sends the subscribe only for tracked symbols', () => {
+		const client = new WebSocketClient('ws://test/ws');
+		client.connect();
+		lastSocket().open();
+
+		client.resyncOrderbook(SYMBOL); // not tracked — no-op
+		expect(lastSocket().sent).toEqual([]);
+
+		client.subscribeOrderbook(SYMBOL, 10);
+		client.resyncOrderbook(SYMBOL);
+		expect(lastSocket().sent).toHaveLength(2);
+		expect(lastSocket().sent[1]).toBe(
+			JSON.stringify({ action: 'subscribe', channel: 'orderbook', symbol: SYMBOL, depth: 10 })
+		);
+	});
+});

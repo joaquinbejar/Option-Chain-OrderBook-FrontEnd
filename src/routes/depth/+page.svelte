@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api/client';
 	import { depthStore, type OptionBookDepth } from '$lib/stores/depth';
+	import { systemStore } from '$lib/stores/system';
 
 	let underlyings = $state<string[]>([]);
 	let expirations = $state<string[]>([]);
@@ -96,7 +97,9 @@
 
 	function onStrikeChange() {
 		if (!selectedUnderlying || !selectedExpiration || !selectedStrike) return;
-		depthStore.loadBooks(selectedUnderlying, selectedExpiration, selectedStrike);
+		// Subscribes both legs' orderbook + trades WS channels; the books
+		// paint from the backend's snapshots and stay live via deltas.
+		depthStore.select(selectedUnderlying, selectedExpiration, selectedStrike);
 	}
 
 	async function loadMarkPrice() {
@@ -224,20 +227,47 @@
 		<div>
 			<h1 class="text-2xl font-bold text-white">Option Pair Depth Monitor</h1>
 			<p class="text-text-muted text-sm mt-1">
-				Point-in-time order book snapshots for Call/Put pairs
+				Live Call/Put order books — user-driven WS deltas over snapshots (maker requotes arrive as
+				quotes and on each resync)
 			</p>
 		</div>
-		<button
-			onclick={onStrikeChange}
-			disabled={$depthStore.loading || !selectedStrike}
-			class="flex items-center gap-2 bg-surface-dark hover:bg-border-dark disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold border border-border-dark rounded-lg px-4 py-2 transition-colors"
-		>
-			<span
-				class="material-symbols-outlined text-base {$depthStore.loading ? 'animate-spin' : ''}"
-				aria-hidden="true">refresh</span
+		<div class="flex items-center gap-3">
+			<!-- Stream state is explicit and truthful: a dropped socket must never
+			     keep reading as Live over a frozen ladder. -->
+			{#if selectedStrike !== 0}
+				<span
+					role="status"
+					class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider"
+				>
+					{#if !$systemStore.connected}
+						<span class="relative inline-flex rounded-full h-2 w-2 bg-danger"></span>
+						<span class="text-danger">Disconnected</span>
+					{:else if $depthStore.loading}
+						<span class="relative inline-flex rounded-full h-2 w-2 bg-warning"></span>
+						<span class="text-warning">Syncing</span>
+					{:else if $depthStore.live}
+						<span class="relative flex h-2 w-2">
+							<span
+								class="animate-ping motion-reduce:hidden absolute inline-flex h-full w-full rounded-full bg-success opacity-75"
+							></span>
+							<span class="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+						</span>
+						<span class="text-success">Live</span>
+					{/if}
+				</span>
+			{/if}
+			<button
+				onclick={() => depthStore.resync()}
+				disabled={$depthStore.loading || !selectedStrike}
+				class="flex items-center gap-2 bg-surface-dark hover:bg-border-dark disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold border border-border-dark rounded-lg px-4 py-2 transition-colors"
 			>
-			{$depthStore.loading ? 'Refreshing…' : 'Refresh'}
-		</button>
+				<span
+					class="material-symbols-outlined text-base {$depthStore.loading ? 'animate-spin' : ''}"
+					aria-hidden="true">refresh</span
+				>
+				{$depthStore.loading ? 'Syncing…' : 'Resync'}
+			</button>
+		</div>
 	</div>
 
 	{#if listError}
@@ -343,7 +373,7 @@
 					<p class="text-text-muted text-xs mt-0.5">
 						{selectedExpiration ? `Expires ${selectedExpiration}` : '—'}
 						{#if $depthStore.call}
-							· snapshot {formatTime($depthStore.call.timestampMs)}
+							· updated {formatTime($depthStore.call.updatedMs)}
 						{/if}
 					</p>
 				</div>
@@ -377,7 +407,7 @@
 					<p class="text-text-muted text-xs mt-0.5">
 						{selectedExpiration ? `Expires ${selectedExpiration}` : '—'}
 						{#if $depthStore.put}
-							· snapshot {formatTime($depthStore.put.timestampMs)}
+							· updated {formatTime($depthStore.put.updatedMs)}
 						{/if}
 					</p>
 				</div>
@@ -398,5 +428,59 @@
 				{@render bookState()}
 			{/if}
 		</div>
+	</div>
+
+	<!-- Trades tape — one row per executed fill on either leg, newest first -->
+	<div class="bg-surface-dark rounded-xl border border-border-dark overflow-hidden">
+		<div class="px-5 py-4 border-b border-border-dark flex justify-between items-center">
+			<h3 class="text-white text-lg font-bold">Trades</h3>
+			<span class="text-text-muted text-xs">
+				{selectedStrike !== 0 ? `Executed fills on the selected pair, live` : '—'}
+			</span>
+		</div>
+		{#if $depthStore.trades.length > 0}
+			<div class="max-h-72 overflow-y-auto" tabindex="0" role="region" aria-label="Recent trades">
+				<table class="w-full text-sm">
+					<thead>
+						<tr
+							class="text-text-muted text-xs font-semibold uppercase tracking-wider border-b border-border-dark bg-background-dark"
+						>
+							<th class="text-left px-5 py-2 font-semibold">Time</th>
+							<th class="text-left px-5 py-2 font-semibold">Leg</th>
+							<th class="text-right px-5 py-2 font-semibold">Price (USD)</th>
+							<th class="text-right px-5 py-2 font-semibold">Qty</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each $depthStore.trades as trade (trade.tradeId)}
+							<tr class="border-b border-border-dark/50">
+								<td class="px-5 py-2 text-text-muted tabular-nums"
+									>{formatTime(trade.timestampMs)}</td
+								>
+								<td class="px-5 py-2">
+									<span
+										class="text-xs font-bold {trade.leg === 'CALL'
+											? 'text-primary'
+											: 'text-purple-400'}">{trade.leg}</span
+									>
+								</td>
+								<td class="px-5 py-2 text-right text-white tabular-nums"
+									>{formatMoney(trade.price)}</td
+								>
+								<td class="px-5 py-2 text-right text-white tabular-nums"
+									>{trade.quantity.toLocaleString()}</td
+								>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		{:else}
+			<div class="px-5 py-6 text-center text-text-muted text-sm">
+				{selectedStrike !== 0
+					? 'No trades on this pair yet — executions appear here in real time.'
+					: 'Select an option to follow its trades.'}
+			</div>
+		{/if}
 	</div>
 </div>
