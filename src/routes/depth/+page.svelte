@@ -439,6 +439,8 @@
 			</span>
 		</div>
 		{#if $depthStore.trades.length > 0}
+			<!-- Scrollable region: focusable on purpose so keyboard users can scroll the tape -->
+			<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 			<div class="max-h-72 overflow-y-auto" tabindex="0" role="region" aria-label="Recent trades">
 				<table class="w-full text-sm">
 					<thead>
